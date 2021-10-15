@@ -88,6 +88,7 @@ function Gauge(props: Props) {
               maxHeight: "100%",
               aspectRatio: `${width} / ${height}`,
               margin: "0 auto",
+              transform: "scale(1)", // Work around a Safari bug that stretches the drawing of the inner div's background
             }}
           >
             <div
