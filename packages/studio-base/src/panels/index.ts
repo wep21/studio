@@ -19,6 +19,7 @@ const builtin: PanelInfo[] = [
   { title: "Image", type: "ImageViewPanel", module: async () => await import("./ImageView") },
   { title: "Teleop", type: "Teleop", module: async () => await import("./Teleop") },
   { title: "Map", type: "map", module: async () => await import("./Map") },
+  { title: "Gauge", type: "gauge", module: async () => await import("./Gauge") },
   { title: "Parameters", type: "Parameters", module: async () => await import("./Parameters") },
   { title: "Plot", type: "Plot", module: async () => await import("./Plot") },
   { title: "Publish", type: "Publish", module: async () => await import("./Publish") },
