@@ -3,17 +3,18 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Stack, getId } from "@fluentui/react";
-import { useCallback, useMemo, useState } from "react";
-import styled from "styled-components";
+import { useCallback, useMemo } from "react";
 
 import MessagePathInput from "@foxglove/studio-base/components/MessagePathSyntax/MessagePathInput";
 import { useLatestMessageDataItem } from "@foxglove/studio-base/components/MessagePathSyntax/useLatestMessageDataItem";
 import Panel from "@foxglove/studio-base/components/Panel";
 import PanelToolbar from "@foxglove/studio-base/components/PanelToolbar";
-import { SaveConfig } from "@foxglove/studio-base/types/panels";
+import { PanelConfigSchema, SaveConfig } from "@foxglove/studio-base/types/panels";
 
 type GaugeConfig = {
   path: string;
+  minValue: number;
+  maxValue: number;
 };
 
 type Props = {
@@ -21,122 +22,146 @@ type Props = {
   saveConfig: SaveConfig<GaugeConfig>;
 };
 
-const GaugeBackground = styled.div`
-  width: 100%;
-  height: 100%;
-  background: conic-gradient(from -120deg, #f00, #ff0, #0c0 240deg);
-  clip-path: path("M1,5 a 1 1 0 0 1 2,0 h-0.5 a 0.5 0.5 0 0 0 -1,0 Z");
-`;
+const supportedDataTypes = [
+  "int8",
+  "uint8",
+  "int16",
+  "uint16",
+  "int32",
+  "uint32",
+  "float32",
+  "float64",
+];
 
 function Gauge(props: Props) {
   const {
-    config: { path = "" },
+    config: { path, minValue, maxValue },
     saveConfig,
   } = props;
-  useLatestMessageDataItem(path);
-  const clipPathId = useMemo(() => getId("gauge-clip-path"), []);
-
-  const validTypes = useMemo(() => ["primitive"], []);
   const onPathChange = useCallback(
     (newPath: string) => saveConfig({ path: newPath }),
     [saveConfig],
   );
-  const cx = 1;
-  const cy = 1;
-  // const r = 0.8;
-  // const a = Math.PI / 8;
-  const [a, setA] = useState(-Math.PI / 8);
-  const [r, setR] = useState(0.8);
-  const height = Math.max(cy - Math.sin(a), cy - r * Math.sin(a));
+  const clipPathId = useMemo(() => getId("gauge-clip-path"), []);
+  const queriedData = useLatestMessageDataItem(path)?.queriedData[0]?.value;
+
+  const rawValue = typeof queriedData === "number" ? queriedData : NaN;
+  const scaledValue =
+    (Math.max(minValue, Math.min(rawValue, maxValue)) - minValue) / (maxValue - minValue);
+  const outOfBounds = rawValue < minValue || rawValue > maxValue;
+
+  const padding = 0.1;
+  const centerX = 0.5 + padding;
+  const centerY = 0.5 + padding;
+  const gaugeAngle = -Math.PI / 8;
+  const radius = 0.5;
+  const innerRadius = 0.4;
+  const width = 1 + 2 * padding;
+  const height =
+    Math.max(
+      centerY - radius * Math.sin(gaugeAngle),
+      centerY - innerRadius * Math.sin(gaugeAngle),
+    ) + padding;
+  const needleThickness = 8;
+  const needleExtraLength = 0.05;
   return (
     <Stack verticalFill>
       <PanelToolbar>
-        <MessagePathInput validTypes={validTypes} path={path} onChange={onPathChange} />
+        <MessagePathInput validTypes={supportedDataTypes} path={path} onChange={onPathChange} />
       </PanelToolbar>
       <Stack.Item
         grow
         style={{
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
+          justifyContent: "space-around",
           alignItems: "center",
+          overflow: "hidden",
+          padding: 8,
         }}
       >
-        <input
-          type="range"
-          min="-3.14"
-          max="3.14"
-          step="0.01"
-          value={a}
-          onChange={(e) => setA(+e.currentTarget.value)}
-        />
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={r}
-          onChange={(e) => setR(+e.currentTarget.value)}
-        />
-        <div
-          style={{
-            background: "conic-gradient(from -120deg, #f00, #ff0, #0c0 240deg)",
-            clipPath: `url(#${clipPathId})`,
-            width: "100%",
-            height: "100%",
-            aspectRatio: `2 / ${height}`,
-          }}
-        ></div>
-        <svg viewBox={`0 0 1 ${height}`}>
-          <clipPath id={clipPathId} clipPathUnits="objectBoundingBox">
-            <g transform="scale(0.5 0.5)">
-              <path
-                d={[
-                  `M ${cx - Math.cos(a)},${cy - Math.sin(a)}`,
-                  //TODO: change width to 1 instead of 2
-                  `A 0.5,0.5 0 ${a < 0 ? 1 : 0} 1 ${cx + Math.cos(a)},${cy - Math.sin(a)}`,
-                  `L ${cx + r * Math.cos(a)},${cy - r * Math.sin(a)}`,
-                  `A ${r},${r} 0 ${a < 0 ? 1 : 0} 0 ${cx - r * Math.cos(a)},${
-                    cy - r * Math.sin(a)
-                  }`,
-                  // `h-0.5 A 0.5,0.5 0 0 0 0.5,1`
-                  `Z`,
-                ].join(" ")}
-                fill="white"
-              />
-            </g>
-          </clipPath>
-          {/* <foreignObject width="100%" height="100%">
+        <div style={{ width: "100%", overflow: "hidden" }}>
+          <div
+            style={{
+              position: "relative",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              aspectRatio: `${width} / ${height}`,
+              margin: "0 auto",
+            }}
+          >
             <div
               style={{
-                background: "conic-gradient(from -120deg, #f00, #ff0, #0c0 240deg)",
+                width: "100%",
+                height: "100%",
+                background: `conic-gradient(from ${-Math.PI / 2 + gaugeAngle}rad at 50% ${
+                  50 / height
+                }%, #f00, #ff0, #0c0 ${2 * (Math.PI / 2 - gaugeAngle)}rad, #f00)`,
                 clipPath: `url(#${clipPathId})`,
-                // height: "100%",
+                opacity: queriedData == undefined ? 0.5 : 1,
               }}
-            ></div>
-          </foreignObject> */}
-        </svg>
-        {/* <svg viewBox="0 0 4 4" width="0" height="0" style={{ position: "absolute" }}>
-          <defs>
+            />
+            <div
+              style={{
+                backgroundColor: outOfBounds ? "orange" : "white",
+                width: needleThickness,
+                height: `${(100 * (radius + needleExtraLength)) / height}%`,
+                border: "2px solid black",
+                borderRadius: needleThickness / 2,
+                position: "absolute",
+                bottom: `${100 * (1 - centerY / height)}%`,
+                left: "50%",
+                transformOrigin: "bottom left",
+                margin: "0 auto",
+                transform: [
+                  `scaleZ(1)`,
+                  `rotate(${
+                    -Math.PI / 2 + gaugeAngle + scaledValue * 2 * (Math.PI / 2 - gaugeAngle)
+                  }rad)`,
+                  `translateX(${-needleThickness / 2}px)`,
+                  `translateY(${needleThickness / 2}px)`,
+                ].join(" "),
+                display: Number.isFinite(scaledValue) ? "block" : "none",
+              }}
+            />
+          </div>
+          <svg style={{ position: "absolute" }}>
             <clipPath id={clipPathId} clipPathUnits="objectBoundingBox">
-              <path d="M0,1 a 0.5 0.5 0 0 1 1,0 h-0.25 a 0.25 0.25 0 0 0 -0.5,0 Z" />
+              <path
+                transform={`scale(${1 / width}, ${1 / height})`}
+                d={[
+                  `M ${centerX - radius * Math.cos(gaugeAngle)},${
+                    centerY - radius * Math.sin(gaugeAngle)
+                  }`,
+                  `A 0.5,0.5 0 ${gaugeAngle < 0 ? 1 : 0} 1 ${
+                    centerX + radius * Math.cos(gaugeAngle)
+                  },${centerY - radius * Math.sin(gaugeAngle)}`,
+                  `L ${centerX + innerRadius * Math.cos(gaugeAngle)},${
+                    centerY - innerRadius * Math.sin(gaugeAngle)
+                  }`,
+                  `A ${innerRadius},${innerRadius} 0 ${gaugeAngle < 0 ? 1 : 0} 0 ${
+                    centerX - innerRadius * Math.cos(gaugeAngle)
+                  },${centerY - innerRadius * Math.sin(gaugeAngle)}`,
+                  `Z`,
+                ].join(" ")}
+              />
             </clipPath>
-          </defs>
-        </svg>
-        <div
-          style={{
-            background: "conic-gradient(from -120deg, #f00, #ff0, #0c0 240deg)",
-            clipPath: `url(#${clipPathId})`,
-            height: "100%",
-          }}
-        ></div> */}
+          </svg>
+        </div>
       </Stack.Item>
     </Stack>
   );
 }
 
-Gauge.panelType = "gauge";
-Gauge.defaultConfig = {};
-Gauge.supportsStrictMode = false;
+const defaultConfig: GaugeConfig = {
+  path: "",
+  minValue: 0,
+  maxValue: 1,
+};
 
-export default Panel(Gauge);
+const configSchema: PanelConfigSchema<GaugeConfig> = [
+  { key: "minValue", type: "number", title: "Minimum value" },
+  { key: "maxValue", type: "number", title: "Maximum value" },
+];
+
+export default Panel(Object.assign(Gauge, { panelType: "gauge", configSchema, defaultConfig }));

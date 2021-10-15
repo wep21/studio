@@ -9,7 +9,7 @@ import PanelSetup from "@foxglove/studio-base/stories/PanelSetup";
 import GaugePanel from "./index";
 
 export default {
-  title: "panels/Gauge/index",
+  title: "panels/Gauge",
   component: GaugePanel,
   decorators: [
     (StoryComponent: Story, { parameters }: StoryContext): JSX.Element => {
@@ -22,73 +22,53 @@ export default {
   ],
 };
 
+function makeFixture(value: number) {
+  return {
+    topics: [{ name: "/data", datatype: "foo_msgs/Bar" }],
+    datatypes: new Map([
+      ["foo_msgs/Bar", { name: "Bar", definitions: [{ name: "value", type: "float32" }] }],
+    ]),
+    frame: {
+      "/data": [
+        {
+          topic: "/data",
+          receiveTime: { sec: 123, nsec: 456 },
+          message: { value },
+        },
+      ],
+    },
+  };
+}
+
 export const EmptyState = (): JSX.Element => {
   return <GaugePanel />;
 };
 
-export const SinglePoint = (): JSX.Element => {
-  return <GaugePanel />;
+export const InvalidValue = (): JSX.Element => {
+  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
 };
+InvalidValue.parameters = { panelSetup: { fixture: makeFixture(NaN) } };
 
-SinglePoint.parameters = {
-  chromatic: {
-    delay: 1000,
-  },
-  panelSetup: {
-    fixture: {
-      topics: [{ name: "/gps", datatype: "sensor_msgs/NavSatFix" }],
-      frame: {
-        "/gps": [
-          {
-            topic: "/gps",
-            receiveTime: { sec: 123, nsec: 456 },
-            message: {
-              latitude: 0,
-              longitude: 0,
-            },
-          },
-        ],
-      },
-    },
-  },
+export const MinValue = (): JSX.Element => {
+  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
 };
+MinValue.parameters = { panelSetup: { fixture: makeFixture(0) } };
 
-export const MultipleTopics = (): JSX.Element => {
-  return <GaugePanel />;
+export const MaxValue = (): JSX.Element => {
+  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
 };
+MaxValue.parameters = { panelSetup: { fixture: makeFixture(1) } };
 
-MultipleTopics.parameters = {
-  chromatic: {
-    delay: 1000,
-  },
-  panelSetup: {
-    fixture: {
-      topics: [
-        { name: "/gps", datatype: "sensor_msgs/NavSatFix" },
-        { name: "/another-gps-topic", datatype: "sensor_msgs/NavSatFix" },
-      ],
-      frame: {
-        "/gps": [
-          {
-            topic: "/gps",
-            receiveTime: { sec: 123, nsec: 456 },
-            message: {
-              latitude: 0,
-              longitude: 0,
-            },
-          },
-        ],
-        "/another-gps-topic": [
-          {
-            topic: "/another-gps-topic",
-            receiveTime: { sec: 123, nsec: 456 },
-            message: {
-              latitude: 0.1,
-              longitude: 0.1,
-            },
-          },
-        ],
-      },
-    },
-  },
+export const TooLow = (): JSX.Element => {
+  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
 };
+TooLow.parameters = { panelSetup: { fixture: makeFixture(-1) } };
+export const TooHigh = (): JSX.Element => {
+  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
+};
+TooHigh.parameters = { panelSetup: { fixture: makeFixture(2) } };
+
+export const CustomRange = (): JSX.Element => {
+  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 5, maxValue: 7 }} />;
+};
+CustomRange.parameters = { panelSetup: { fixture: makeFixture(6.5) } };
