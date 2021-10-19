@@ -148,8 +148,8 @@ function IndicatorLight(props: Props) {
         dialogContentProps={{ title: "Indicator Light panel settings", showCloseButton: true }}
         hidden={!showSettings}
         onDismiss={() => setShowSettings(false)}
-        maxWidth={480}
-        minWidth={480}
+        maxWidth={550}
+        minWidth={550}
       >
         <Settings config={config} onConfigChange={saveConfig} />
         <DialogFooter>
@@ -162,11 +162,8 @@ function IndicatorLight(props: Props) {
 
 const defaultConfig: Config = {
   path: "",
-  rules: [
-    { operator: "<", rawValue: "-0.2", color: "#4a8ce2" },
-    { operator: ">", rawValue: "0.2", color: "#e24a4a" },
-  ],
-  fallbackColor: "#68e24a",
+  rules: [{ operator: "=", rawValue: "true", color: "#68e24a" }],
+  fallbackColor: "#a0a0a0",
 };
 
 export default Panel(Object.assign(IndicatorLight, { panelType: "IndicatorLight", defaultConfig }));
