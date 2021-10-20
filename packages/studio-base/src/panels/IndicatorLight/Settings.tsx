@@ -222,7 +222,6 @@ export default function Settings(props: SettingsProps): JSX.Element {
       >
         <MessagePathInput path={config.path} onChange={onChangePath} />
       </Stack>
-
       <Text>Rules</Text>
       <DetailsList
         compact
@@ -230,9 +229,18 @@ export default function Settings(props: SettingsProps): JSX.Element {
         items={rulesWithEmpty}
         columns={columns}
       />
-
       <Text>Default color</Text>
       <ColorPicker color={hexToColorObj(config.fallbackColor)} onChange={onChangeFallbackColor} />
+      <Text>Default label</Text>
+      <TextField
+        value={config.fallbackLabel}
+        onChange={(_event, newValue) => {
+          if (newValue == undefined) {
+            return;
+          }
+          saveConfig({ fallbackLabel: newValue });
+        }}
+      />
     </Stack>
   );
 }
