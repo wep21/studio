@@ -83,7 +83,7 @@ const BooleanStory = (): JSX.Element => {
         style: "circle",
         rules: [
           { operator: "=", rawValue: "true", color: "#00dd00", label: "True" },
-          { operator: "=", rawValue: "true", color: "#dd00dd", label: "False" },
+          { operator: "=", rawValue: "false", color: "#dd00dd", label: "False" },
         ],
         fallbackColor: "#dddd00",
         fallbackLabel: "Fallback",
