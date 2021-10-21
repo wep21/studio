@@ -222,6 +222,20 @@ export default function Settings(props: SettingsProps): JSX.Element {
       >
         <MessagePathInput path={config.path} onChange={onChangePath} />
       </Stack>
+      <Dropdown
+        label="Style"
+        selectedKey={config.style}
+        options={[
+          { key: "circle", text: "Circle" },
+          { key: "full", text: "Full frame" },
+        ]}
+        onChange={(_event, option) => {
+          if (option == undefined) {
+            return;
+          }
+          saveConfig({ style: option.key as "circle" | "full" });
+        }}
+      />
       <Text>Rules</Text>
       <DetailsList
         compact

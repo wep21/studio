@@ -2,7 +2,15 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { Dialog, DialogFooter, PrimaryButton, Stack, useTheme } from "@fluentui/react";
+import {
+  Dialog,
+  DialogFooter,
+  getColorFromString,
+  hsv2hsl,
+  PrimaryButton,
+  Stack,
+  useTheme,
+} from "@fluentui/react";
 import { useMemo, useState } from "react";
 
 import HoverableIconButton from "@foxglove/studio-base/components/HoverableIconButton";
@@ -19,6 +27,15 @@ type Props = {
   config: Config;
   saveConfig: SaveConfig<Config>;
 };
+
+function getTextColorForBackground(backgroundColor: string) {
+  const color = getColorFromString(backgroundColor);
+  if (!color) {
+    return "white";
+  }
+  const hsl = hsv2hsl(color.h, color.s, color.v);
+  return hsl.l >= 50 ? "black" : "white";
+}
 
 function getMatchingRule(
   rawValue:
@@ -71,7 +88,7 @@ function getMatchingRule(
 function IndicatorLight(props: Props) {
   const {
     config,
-    config: { path, rules, fallbackColor, fallbackLabel },
+    config: { style, path, rules, fallbackColor, fallbackLabel },
     saveConfig,
   } = props;
   const [showSettings, setShowSettings] = useState(false);
@@ -97,27 +114,33 @@ function IndicatorLight(props: Props) {
           alignItems: "center",
           overflow: "hidden",
           padding: 8,
+          backgroundColor: style === "full" ? matchingRule?.color ?? fallbackColor : undefined,
         }}
       >
         <Stack horizontal verticalAlign="center" tokens={{ childrenGap: theme.spacing.m }}>
-          <div
-            style={{
-              width: "40px",
-              height: "40px",
-              backgroundColor: matchingRule?.color ?? fallbackColor,
-              borderRadius: "50%",
-              backgroundImage: [
-                `radial-gradient(transparent, transparent 55%, rgba(255,255,255,0.4) 80%, rgba(255,255,255,0.4))`,
-                `radial-gradient(circle at 38% 35%, rgba(255,255,255,0.8), transparent 30%, transparent)`,
-                `radial-gradient(circle at 46% 44%, transparent, transparent 61%, rgba(0,0,0,0.7) 74%, rgba(0,0,0,0.7))`,
-              ].join(","),
-              position: "relative",
-            }}
-          />
+          {style === "circle" && (
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                backgroundColor: matchingRule?.color ?? fallbackColor,
+                borderRadius: "50%",
+                backgroundImage: [
+                  `radial-gradient(transparent, transparent 55%, rgba(255,255,255,0.4) 80%, rgba(255,255,255,0.4))`,
+                  `radial-gradient(circle at 38% 35%, rgba(255,255,255,0.8), transparent 30%, transparent)`,
+                  `radial-gradient(circle at 46% 44%, transparent, transparent 61%, rgba(0,0,0,0.7) 74%, rgba(0,0,0,0.7))`,
+                ].join(","),
+                position: "relative",
+              }}
+            />
+          )}
           <div
             style={{
               fontFamily: fonts.MONOSPACE,
-              color: matchingRule?.color ?? fallbackColor,
+              color:
+                style === "full"
+                  ? getTextColorForBackground(matchingRule?.color ?? fallbackColor)
+                  : matchingRule?.color ?? fallbackColor,
               fontSize: theme.fonts.xxLarge.fontSize,
             }}
           >
@@ -161,6 +184,7 @@ function IndicatorLight(props: Props) {
 
 const defaultConfig: Config = {
   path: "",
+  style: "circle",
   rules: [{ operator: "=", rawValue: "true", color: "#68e24a", label: "True" }],
   fallbackColor: "#a0a0a0",
   fallbackLabel: "False",

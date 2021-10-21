@@ -12,6 +12,7 @@ export type Rule = {
 
 export type Config = {
   path: string;
+  style: "circle" | "full";
   rules: Rule[];
   fallbackColor: string;
   fallbackLabel: string;
