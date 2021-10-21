@@ -3,13 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Dialog, DialogFooter, PrimaryButton, Stack, useTheme } from "@fluentui/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import HoverableIconButton from "@foxglove/studio-base/components/HoverableIconButton";
 import { useLatestMessageDataItem } from "@foxglove/studio-base/components/MessagePathSyntax/useLatestMessageDataItem";
 import Panel from "@foxglove/studio-base/components/Panel";
 import { SaveConfig } from "@foxglove/studio-base/types/panels";
 import { assertNever } from "@foxglove/studio-base/util/assertNever";
+import { fonts } from "@foxglove/studio-base/util/sharedStyleConstants";
 
 import Settings from "./Settings";
 import { Config, Rule } from "./types";
@@ -19,7 +20,7 @@ type Props = {
   saveConfig: SaveConfig<Config>;
 };
 
-function getColor(
+function getMatchingRule(
   rawValue:
     | undefined
     | boolean
@@ -28,11 +29,10 @@ function getColor(
     | string
     | { data?: boolean | bigint | number | string },
   rules: readonly Rule[],
-  fallbackColor: string,
-) {
+): Rule | undefined {
   const value = typeof rawValue === "object" ? rawValue.data : rawValue;
   if (value == undefined) {
-    return fallbackColor;
+    return undefined;
   }
   for (const rule of rules) {
     let rhs: boolean | number | string | bigint;
@@ -54,24 +54,24 @@ function getColor(
     }
 
     if (rule.operator === "=" && value === rhs) {
-      return rule.color;
+      return rule;
     } else if (rule.operator === "<" && value < rhs) {
-      return rule.color;
+      return rule;
     } else if (rule.operator === "<=" && value <= rhs) {
-      return rule.color;
+      return rule;
     } else if (rule.operator === ">" && value > rhs) {
-      return rule.color;
+      return rule;
     } else if (rule.operator === ">=" && value >= rhs) {
-      return rule.color;
+      return rule;
     }
   }
-  return fallbackColor;
+  return undefined;
 }
 
 function IndicatorLight(props: Props) {
   const {
     config,
-    config: { path, rules, fallbackColor },
+    config: { path, rules, fallbackColor, fallbackLabel },
     saveConfig,
   } = props;
   const [showSettings, setShowSettings] = useState(false);
@@ -85,6 +85,7 @@ function IndicatorLight(props: Props) {
     typeof queriedData === "number"
       ? queriedData
       : undefined;
+  const matchingRule = useMemo(() => getMatchingRule(rawValue, rules), [rawValue, rules]);
   return (
     <Stack verticalFill>
       <Stack.Item
@@ -98,33 +99,31 @@ function IndicatorLight(props: Props) {
           padding: 8,
         }}
       >
-        <div
-          style={{
-            width: "40px",
-            height: "40px",
-            backgroundColor: getColor(rawValue, rules, fallbackColor),
-            // boxShadow: "inset 0px 0px 4px 3px rgba(255, 255, 255, 50%)",
-            // boxShadow: "rgb(255 255 255 / 50%) 1px 1px 5px 2px inset, rgb(0 0 0 / 80%) -1px -1px 4px 0px inset",
-            borderRadius: "50%",
-            backgroundImage: [
-              `radial-gradient(transparent, transparent 55%, rgba(255,255,255,0.4) 80%, rgba(255,255,255,0.4))`,
-              `radial-gradient(circle at 38% 35%, rgba(255,255,255,0.8), transparent 30%, transparent)`,
-              `radial-gradient(circle at 46% 44%, transparent, transparent 61%, rgba(0,0,0,0.7) 74%, rgba(0,0,0,0.7))`,
-            ].join(","),
-            position: "relative",
-          }}
-        >
-          {/* <div
+        <Stack horizontal verticalAlign="center" tokens={{ childrenGap: theme.spacing.m }}>
+          <div
             style={{
-              position: "absolute",
-              top: 2,
-              left: 2,
-              width: 0,
-              height: 0,
-              boxShadow: "0px 0px 18px 11px #2F378C",
+              width: "40px",
+              height: "40px",
+              backgroundColor: matchingRule?.color ?? fallbackColor,
+              borderRadius: "50%",
+              backgroundImage: [
+                `radial-gradient(transparent, transparent 55%, rgba(255,255,255,0.4) 80%, rgba(255,255,255,0.4))`,
+                `radial-gradient(circle at 38% 35%, rgba(255,255,255,0.8), transparent 30%, transparent)`,
+                `radial-gradient(circle at 46% 44%, transparent, transparent 61%, rgba(0,0,0,0.7) 74%, rgba(0,0,0,0.7))`,
+              ].join(","),
+              position: "relative",
             }}
-          ></div> */}
-        </div>
+          />
+          <div
+            style={{
+              fontFamily: fonts.MONOSPACE,
+              color: matchingRule?.color ?? fallbackColor,
+              fontSize: theme.fonts.xxLarge.fontSize,
+            }}
+          >
+            {matchingRule?.label ?? fallbackLabel}
+          </div>
+        </Stack>
       </Stack.Item>
       <Stack styles={{ root: { position: "absolute", top: 0, left: 0, margin: theme.spacing.s1 } }}>
         <HoverableIconButton
@@ -162,8 +161,9 @@ function IndicatorLight(props: Props) {
 
 const defaultConfig: Config = {
   path: "",
-  rules: [{ operator: "=", rawValue: "true", color: "#68e24a" }],
+  rules: [{ operator: "=", rawValue: "true", color: "#68e24a", label: "True" }],
   fallbackColor: "#a0a0a0",
+  fallbackLabel: "False",
 };
 
 export default Panel(Object.assign(IndicatorLight, { panelType: "IndicatorLight", defaultConfig }));
