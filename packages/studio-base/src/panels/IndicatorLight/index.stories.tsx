@@ -6,11 +6,11 @@ import { Story, StoryContext } from "@storybook/react";
 
 import PanelSetup from "@foxglove/studio-base/stories/PanelSetup";
 
-import GaugePanel from "./index";
+import IndicatorLight from "./index";
 
 export default {
-  title: "panels/Gauge",
-  component: GaugePanel,
+  title: "panels/IndicatorLight",
+  component: IndicatorLight,
   decorators: [
     (StoryComponent: Story, { parameters }: StoryContext): JSX.Element => {
       return (
@@ -22,12 +22,9 @@ export default {
   ],
 };
 
-function makeFixture(value: number) {
+function makeFixture(value: boolean | number | bigint | string) {
   return {
     topics: [{ name: "/data", datatype: "foo_msgs/Bar" }],
-    datatypes: new Map([
-      ["foo_msgs/Bar", { name: "Bar", definitions: [{ name: "value", type: "float32" }] }],
-    ]),
     frame: {
       "/data": [
         {
@@ -41,34 +38,99 @@ function makeFixture(value: number) {
 }
 
 export const EmptyState = (): JSX.Element => {
-  return <GaugePanel />;
+  return <IndicatorLight />;
 };
 
-export const InvalidValue = (): JSX.Element => {
-  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
+export const MissingValue = (): JSX.Element => {
+  return (
+    <IndicatorLight
+      overrideConfig={{
+        path: "/data.value",
+        style: "circle",
+        rules: [
+          { operator: "=", rawValue: "true", color: "#00dd00", label: "True" },
+          { operator: "=", rawValue: "true", color: "#dd00dd", label: "False" },
+        ],
+        fallbackColor: "#dddd00",
+        fallbackLabel: "Fallback",
+      }}
+    />
+  );
 };
-InvalidValue.parameters = { panelSetup: { fixture: makeFixture(NaN) } };
 
-export const MinValue = (): JSX.Element => {
-  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
+export const FullStyle = (): JSX.Element => {
+  return (
+    <IndicatorLight
+      overrideConfig={{
+        path: "/data.value",
+        style: "full",
+        rules: [
+          { operator: "=", rawValue: "true", color: "#00dd00", label: "True" },
+          { operator: "=", rawValue: "true", color: "#dd00dd", label: "False" },
+        ],
+        fallbackColor: "#dddd00",
+        fallbackLabel: "Fallback",
+      }}
+    />
+  );
 };
-MinValue.parameters = { panelSetup: { fixture: makeFixture(0) } };
 
-export const MaxValue = (): JSX.Element => {
-  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
+const BooleanStory = (): JSX.Element => {
+  return (
+    <IndicatorLight
+      overrideConfig={{
+        path: "/data.value",
+        style: "circle",
+        rules: [
+          { operator: "=", rawValue: "true", color: "#00dd00", label: "True" },
+          { operator: "=", rawValue: "true", color: "#dd00dd", label: "False" },
+        ],
+        fallbackColor: "#dddd00",
+        fallbackLabel: "Fallback",
+      }}
+    />
+  );
 };
-MaxValue.parameters = { panelSetup: { fixture: makeFixture(1) } };
+export const BooleanTrue = (): JSX.Element => <BooleanStory />;
+BooleanTrue.parameters = { panelSetup: { fixture: makeFixture(true) } };
+export const BooleanFalse = (): JSX.Element => <BooleanStory />;
+BooleanFalse.parameters = { panelSetup: { fixture: makeFixture(false) } };
 
-export const TooLow = (): JSX.Element => {
-  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
+export const String = (): JSX.Element => {
+  return (
+    <IndicatorLight
+      overrideConfig={{
+        path: "/data.value",
+        style: "circle",
+        rules: [{ operator: "=", rawValue: "hello", color: "#00dd00", label: "Hello" }],
+        fallbackColor: "#dddd00",
+        fallbackLabel: "Fallback",
+      }}
+    />
+  );
 };
-TooLow.parameters = { panelSetup: { fixture: makeFixture(-1) } };
-export const TooHigh = (): JSX.Element => {
-  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 0, maxValue: 1 }} />;
-};
-TooHigh.parameters = { panelSetup: { fixture: makeFixture(2) } };
+String.parameters = { panelSetup: { fixture: makeFixture("hello") } };
 
-export const CustomRange = (): JSX.Element => {
-  return <GaugePanel overrideConfig={{ path: "/data.value", minValue: 5, maxValue: 7 }} />;
+const NumberStory = (): JSX.Element => {
+  return (
+    <IndicatorLight
+      overrideConfig={{
+        path: "/data.value",
+        style: "circle",
+        rules: [
+          { operator: "<", rawValue: "0", color: "#00dd00", label: "Negative" },
+          { operator: "=", rawValue: "0", color: "#929292", label: "Zero" },
+          { operator: ">", rawValue: "0", color: "#dd00dd", label: "Positive" },
+        ],
+        fallbackColor: "#dddd00",
+        fallbackLabel: "Fallback",
+      }}
+    />
+  );
 };
-CustomRange.parameters = { panelSetup: { fixture: makeFixture(6.5) } };
+export const NumberNegative = (): JSX.Element => <NumberStory />;
+NumberNegative.parameters = { panelSetup: { fixture: makeFixture(-1) } };
+export const NumberZero = (): JSX.Element => <NumberStory />;
+NumberZero.parameters = { panelSetup: { fixture: makeFixture(0) } };
+export const NumberPositive = (): JSX.Element => <NumberStory />;
+NumberPositive.parameters = { panelSetup: { fixture: makeFixture(1) } };
