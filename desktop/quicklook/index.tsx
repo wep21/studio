@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
+import {} from "react-dom/next";
 import { useAsync } from "react-use";
 import { createGlobalStyle } from "styled-components";
 
@@ -98,10 +99,9 @@ function Root(): JSX.Element {
   );
 }
 
-ReactDOM.render(
+ReactDOM.createRoot(rootEl).render(
   <>
     <GlobalStyle />
     <Root />
   </>,
-  rootEl,
 );

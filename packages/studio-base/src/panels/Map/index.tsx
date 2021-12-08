@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import ReactDOM from "react-dom";
+import {} from "react-dom/next";
 
 import { PanelExtensionContext } from "@foxglove/studio";
 import Panel from "@foxglove/studio-base/components/Panel";
@@ -16,11 +17,10 @@ import helpContent from "./index.help.md";
 import "leaflet/dist/leaflet.css";
 
 function initPanel(context: PanelExtensionContext) {
-  ReactDOM.render(
+  ReactDOM.createRoot(context.panelElement).render(
     <ThemeProvider isDark>
       <MapPanel context={context} />
     </ThemeProvider>,
-    context.panelElement,
   );
 }
 

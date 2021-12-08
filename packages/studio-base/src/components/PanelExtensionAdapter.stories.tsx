@@ -4,6 +4,7 @@
 
 import { ReactElement, useLayoutEffect, useState } from "react";
 import ReactDOM from "react-dom";
+import {} from "react-dom/next";
 
 import { PanelExtensionContext, ParameterValue, RenderState } from "@foxglove/studio";
 import MockPanelContextProvider from "@foxglove/studio-base/components/MockPanelContextProvider";
@@ -74,7 +75,7 @@ function SimplePanel({ context }: { context: PanelExtensionContext }) {
 
 export const SimplePanelRender = (): ReactElement => {
   function initPanel(context: PanelExtensionContext) {
-    ReactDOM.render(<SimplePanel context={context} />, context.panelElement);
+    ReactDOM.createRoot(context.panelElement).render(<SimplePanel context={context} />);
   }
 
   return (

@@ -83,7 +83,9 @@ function AppWrapper() {
   return <App demoBagUrl={DEMO_BAG_URL} deepLinks={deepLinks} availableSources={dataSources} />;
 }
 
-export default function Root(): ReactElement {
+export default function Root({
+  callback,
+}: { callback?: React.Ref<HTMLDivElement> } = {}): ReactElement {
   const api = useMemo(() => new ConsoleApi(process.env.FOXGLOVE_API_URL!), []);
 
   const providers = [
@@ -108,7 +110,7 @@ export default function Root(): ReactElement {
   return (
     <ThemeProvider isDark={isDark}>
       <GlobalCss />
-      <CssBaseline>
+      <CssBaseline ref={callback}>
         <ErrorBoundary>
           <MultiProvider providers={providers}>
             <NativeColorSchemeAdapter />

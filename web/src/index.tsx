@@ -4,6 +4,7 @@
 
 import { init as initSentry } from "@sentry/browser";
 import ReactDOM from "react-dom";
+import {} from "react-dom/next";
 
 import Logger from "@foxglove/log";
 
@@ -33,11 +34,12 @@ if (typeof process.env.SENTRY_DSN === "string") {
 }
 
 const rootEl = document.getElementById("root");
-if (!rootEl) {
-  throw new Error("missing #root element");
-}
 
 async function main() {
+  if (!rootEl) {
+    throw new Error("missing #root element");
+  }
+
   const searchParams = new URLSearchParams(window.location.search);
   const demoMode = searchParams.get("demo") != undefined;
   if (demoMode) {
@@ -50,20 +52,21 @@ async function main() {
   const isChrome = chromeVersion !== 0;
 
   const canRenderApp = typeof BigInt64Array === "function" && typeof BigUint64Array === "function";
+  const renderCallback = () => {
+    // Integration tests look for this console log to indicate the app has rendered once
+    log.debug("App rendered");
+  };
   const banner = (
     <VersionBanner
       isChrome={isChrome}
       currentVersion={chromeVersion}
       isDismissable={canRenderApp}
+      callback={renderCallback}
     />
   );
-  const renderCallback = () => {
-    // Integration tests look for this console log to indicate the app has rendered once
-    log.debug("App rendered");
-  };
 
   if (!canRenderApp) {
-    ReactDOM.render(banner, rootEl, renderCallback);
+    ReactDOM.createRoot(rootEl).render(banner);
     return;
   }
 
@@ -76,13 +79,11 @@ async function main() {
   await waitForFonts();
 
   const { Root } = await import("./Root");
-  ReactDOM.render(
+  ReactDOM.createRoot(rootEl).render(
     <>
       {banner}
-      <Root loadWelcomeLayout={demoMode} />
+      <Root loadWelcomeLayout={demoMode} callback={renderCallback} />
     </>,
-    rootEl,
-    renderCallback,
   );
 }
 

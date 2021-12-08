@@ -40,10 +40,12 @@ const VersionBanner = function ({
   isChrome,
   currentVersion,
   isDismissable,
+  callback,
 }: {
   isChrome: boolean;
   currentVersion: number;
   isDismissable: boolean;
+  callback?: React.Ref<HTMLDivElement>;
 }): ReactElement | ReactNull {
   const [showBanner, setShowBanner] = useState(true);
 
@@ -57,7 +59,7 @@ const VersionBanner = function ({
   const fixText = isChrome ? "Update Chrome" : "Download Chrome";
 
   return (
-    <StyledBanner isDismissable={isDismissable}>
+    <StyledBanner isDismissable={isDismissable} ref={callback}>
       <Stack style={{ padding: "10px" }} tokens={{ childrenGap: 8 }} horizontalAlign="center">
         {isDismissable ? (
           <StyledIconWrapper onClick={() => setShowBanner(false)}>

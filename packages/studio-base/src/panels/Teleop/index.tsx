@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import ReactDOM from "react-dom";
+import {} from "react-dom/next";
 
 import { PanelExtensionContext } from "@foxglove/studio";
 import Panel from "@foxglove/studio-base/components/Panel";
@@ -13,7 +14,7 @@ import TeleopPanel from "./TeleopPanel";
 import helpContent from "./index.help.md";
 
 function initPanel(context: PanelExtensionContext) {
-  ReactDOM.render(<TeleopPanel context={context} />, context.panelElement);
+  ReactDOM.createRoot(context.panelElement).render(<TeleopPanel context={context} />);
 }
 
 type Props = {

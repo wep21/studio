@@ -2448,13 +2448,13 @@ __metadata:
     protobufjs: 6.11.2
     quickhull3d: 2.0.5
     rc-tree: 5.3.0
-    react: 17.0.2
+    react: 18.0.0-rc.0
     react-autocomplete: "janpaul123/react-autocomplete#bc8737070b5744069719c8fcd4e0a197192b0d48"
-    react-dom: 17.0.2
+    react-dom: 18.0.0-rc.0
     react-highlight-words: 0.17.0
     react-hover-observer: 2.1.1
     react-input-autosize: 3.0.0
-    react-is: 17.0.2
+    react-is: 18.0.0-rc.0
     react-json-tree: 0.15.1
     react-markdown: 7.1.1
     react-monaco-editor: 0.46.0
@@ -19492,16 +19492,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:17.0.2":
-  version: 17.0.2
-  resolution: "react-dom@npm:17.0.2"
+"react-dom@npm:18.0.0-rc.0":
+  version: 18.0.0-rc.0
+  resolution: "react-dom@npm:18.0.0-rc.0"
   dependencies:
     loose-envify: ^1.1.0
     object-assign: ^4.1.1
-    scheduler: ^0.20.2
+    scheduler: ^0.21.0-rc.0
   peerDependencies:
-    react: 17.0.2
-  checksum: 1c1eaa3bca7c7228d24b70932e3d7c99e70d1d04e13bb0843bbf321582bc25d7961d6b8a6978a58a598af2af496d1cedcfb1bf65f6b0960a0a8161cb8dab743c
+    react: ^18.0.0-rc.0
+  checksum: 713db349fad704527d328275d43c57ca670c801a6592e5f308c5572a7559540d0dcfc0b065a878cea4764f742d27fb2ed1065092ca40589759d5b51ecce6773b
   languageName: node
   linkType: hard
 
@@ -19627,6 +19627,13 @@ __metadata:
   version: 17.0.2
   resolution: "react-is@npm:17.0.2"
   checksum: 9d6d111d8990dc98bc5402c1266a808b0459b5d54830bbea24c12d908b536df7883f268a7868cfaedde3dd9d4e0d574db456f84d2e6df9c4526f99bb4b5344d8
+  languageName: node
+  linkType: hard
+
+"react-is@npm:18.0.0-rc.0":
+  version: 18.0.0-rc.0
+  resolution: "react-is@npm:18.0.0-rc.0"
+  checksum: 13f8a9f330043bb2c7eec994430a259ab294bc1919e3f180b7268c6adaff17e4e3c7c71dabcdcedb942b8ee43503e621c50958e7551acba67e1f6033d3266f8a
   languageName: node
   linkType: hard
 
@@ -20010,13 +20017,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:17.0.2":
-  version: 17.0.2
-  resolution: "react@npm:17.0.2"
+"react@npm:18.0.0-rc.0":
+  version: 18.0.0-rc.0
+  resolution: "react@npm:18.0.0-rc.0"
   dependencies:
     loose-envify: ^1.1.0
     object-assign: ^4.1.1
-  checksum: b254cc17ce3011788330f7bbf383ab653c6848902d7936a87b09d835d091e3f295f7e9dd1597c6daac5dc80f90e778c8230218ba8ad599f74adcc11e33b9d61b
+  checksum: bb886ab411d7732ca8aace98bf0015a31f30b010bd674accdbbf4a474429b656b4463a58e677f33972bab9b820e949765e27fc6c468b13833b515e50b2d0b999
   languageName: node
   linkType: hard
 
@@ -20876,6 +20883,16 @@ __metadata:
     loose-envify: ^1.1.0
     object-assign: ^4.1.1
   checksum: c4b35cf967c8f0d3e65753252d0f260271f81a81e427241295c5a7b783abf4ea9e905f22f815ab66676f5313be0a25f47be582254db8f9241b259213e999b8fc
+  languageName: node
+  linkType: hard
+
+"scheduler@npm:^0.21.0-rc.0":
+  version: 0.21.0-rc.0-next-d3001fb6f-20211208
+  resolution: "scheduler@npm:0.21.0-rc.0-next-d3001fb6f-20211208"
+  dependencies:
+    loose-envify: ^1.1.0
+    object-assign: ^4.1.1
+  checksum: 49dd5911fd7c8a67be4c54c1017e21615e942458df8a042778e5d7d88bb104c4481e0bd247eb540819d2f6b4c73e89efcddc360a6274223efe97041d13b7eb0c
   languageName: node
   linkType: hard
 

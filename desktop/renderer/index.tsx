@@ -7,6 +7,7 @@
 
 import { init as initSentry } from "@sentry/electron";
 import ReactDOM from "react-dom";
+import {} from "react-dom/next";
 
 import { Sockets } from "@foxglove/electron-socket/renderer";
 import Logger from "@foxglove/log";
@@ -44,11 +45,12 @@ installDevtoolsFormatters();
 overwriteFetch();
 
 const rootEl = document.getElementById("root");
-if (!rootEl) {
-  throw new Error("missing #root element");
-}
 
 async function main() {
+  if (!rootEl) {
+    throw new Error("missing #root element");
+  }
+
   // Initialize the RPC channel for electron-socket. This method is called first
   // since the window.onmessage handler needs to be installed before
   // window.onload fires
@@ -57,10 +59,14 @@ async function main() {
   // consider moving waitForFonts into App to display an app loading screen
   await waitForFonts();
 
-  ReactDOM.render(<Root />, rootEl, () => {
-    // Integration tests look for this console log to indicate the app has rendered once
-    log.debug("App rendered");
-  });
+  ReactDOM.createRoot(rootEl).render(
+    <Root
+      callback={() => {
+        // Integration tests look for this console log to indicate the app has rendered once
+        log.debug("App rendered");
+      }}
+    />,
+  );
 }
 
 void main();

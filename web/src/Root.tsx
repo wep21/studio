@@ -89,7 +89,13 @@ function ColorSchemeThemeProvider({ children }: React.PropsWithChildren<unknown>
   return <ThemeProvider isDark={isDark}>{children}</ThemeProvider>;
 }
 
-export function Root({ loadWelcomeLayout }: { loadWelcomeLayout: boolean }): JSX.Element {
+export function Root({
+  loadWelcomeLayout,
+  callback,
+}: {
+  loadWelcomeLayout: boolean;
+  callback: React.Ref<HTMLDivElement>;
+}): JSX.Element {
   const api = useMemo(() => new ConsoleApi(process.env.FOXGLOVE_API_URL!), []);
 
   const providers = [
@@ -108,7 +114,7 @@ export function Root({ loadWelcomeLayout }: { loadWelcomeLayout: boolean }): JSX
     <LocalStorageAppConfigurationProvider>
       <ColorSchemeThemeProvider>
         <GlobalCss />
-        <CssBaseline>
+        <CssBaseline ref={callback}>
           <ErrorBoundary>
             <MultiProvider providers={providers}>
               <AppWrapper loadWelcomeLayout={loadWelcomeLayout} />

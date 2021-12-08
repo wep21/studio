@@ -180,11 +180,17 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function CssBaseline(props: PropsWithChildren<unknown>): JSX.Element {
+export default function CssBaseline(
+  props: PropsWithChildren<{ ref?: React.Ref<HTMLDivElement> }>,
+): JSX.Element {
   const styles = useStyles();
 
   // styles scoped to our container
   const className = styles.root;
 
-  return <div className={className}>{props.children}</div>;
+  return (
+    <div className={className} ref={props.ref}>
+      {props.children}
+    </div>
+  );
 }
