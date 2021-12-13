@@ -41,6 +41,7 @@ type AppProps = {
   availableSources: IDataSourceFactory[];
   demoBagUrl?: string;
   deepLinks?: string[];
+  disableUrlStateSynchronization?: boolean;
 };
 
 function AppContent(props: AppProps): JSX.Element {
@@ -74,6 +75,7 @@ function AppContent(props: AppProps): JSX.Element {
               loadWelcomeLayout={props.loadWelcomeLayout}
               demoBagUrl={props.demoBagUrl}
               deepLinks={props.deepLinks}
+              disableUrlStateSynchronization={props.disableUrlStateSynchronization ?? false}
             />
           </PanelCatalogProvider>
         </Suspense>

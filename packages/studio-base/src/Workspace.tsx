@@ -144,6 +144,7 @@ type WorkspaceProps = {
   loadWelcomeLayout?: boolean;
   demoBagUrl?: string;
   deepLinks?: string[];
+  disableUrlStateSynchronization?: boolean;
 };
 
 const selectPlayerPresence = ({ playerState }: MessagePipelineContext) => playerState.presence;
@@ -464,7 +465,9 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
           <div className={classes.dropzone}>Drop a file here</div>
         </DropOverlay>
       </DocumentDropListener>
-      <URLStateSyncAdapter deepLinks={props.deepLinks ?? []} />
+      {props.disableUrlStateSynchronization !== true && (
+        <URLStateSyncAdapter deepLinks={props.deepLinks ?? []} />
+      )}
       <div className={classes.container} ref={containerRef} tabIndex={0}>
         <Sidebar
           items={sidebarItems}
