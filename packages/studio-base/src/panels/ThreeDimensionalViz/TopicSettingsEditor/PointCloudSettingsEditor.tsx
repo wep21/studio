@@ -11,7 +11,7 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import React, { useCallback } from "react";
+import React from "react";
 import styled from "styled-components";
 
 import { Color } from "@foxglove/regl-worldview";
@@ -132,18 +132,6 @@ export default function PointCloudSettingsEditor(
 ): React.ReactElement {
   const { message, settings = {}, onFieldChange, onSettingsChange } = props;
 
-  const onColorModeChange = useCallback(
-    (
-      newValue: (ColorMode | undefined) | ((prevColorMode?: ColorMode) => ColorMode | undefined),
-    ) => {
-      onSettingsChange((newSettings) => ({
-        ...newSettings,
-        colorMode: typeof newValue === "function" ? newValue(newSettings.colorMode) : newValue,
-      }));
-    },
-    [onSettingsChange],
-  );
-
   const hasRGB = message?.fields?.some(({ name }) => name === "rgb") ?? false;
   const defaultColorField =
     message?.fields?.find(({ name }) => DEFAULT_COLOR_FIELDS.includes(name))?.name ??
@@ -155,6 +143,15 @@ export default function PointCloudSettingsEditor(
       : defaultColorField
       ? { mode: "turbo", colorField: defaultColorField }
       : { mode: "flat", flatColor: DEFAULT_FLAT_COLOR });
+
+  function onColorModeChange(
+    newValue: (ColorMode | undefined) | ((prevColorMode?: ColorMode) => ColorMode | undefined),
+  ) {
+    onSettingsChange((oldSettings) => ({
+      ...oldSettings,
+      colorMode: typeof newValue === "function" ? newValue(colorMode) : newValue,
+    }));
+  }
 
   return (
     <Flex col>
