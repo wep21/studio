@@ -11,14 +11,14 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { Box, FormLabel, Stack } from "@mui/material";
+
 import { Color } from "@foxglove/regl-worldview";
 import ColorPicker from "@foxglove/studio-base/components/ColorPicker";
-import Flex from "@foxglove/studio-base/components/Flex";
 import { LaserScan } from "@foxglove/studio-base/types/Messages";
 
 import CommonDecaySettings from "./CommonDecaySettings";
 import CommonPointSettings from "./CommonPointSettings";
-import { SLabel } from "./common";
 import { TopicSettingsEditorProps } from "./types";
 
 export type LaserScanSettings = {
@@ -34,7 +34,7 @@ export default function LaserScanSettingsEditor(
   const { settings, onFieldChange } = props;
 
   return (
-    <Flex col>
+    <Stack spacing={3} marginBottom={2}>
       <CommonPointSettings
         settings={settings}
         defaultPointSize={4}
@@ -43,11 +43,13 @@ export default function LaserScanSettingsEditor(
       />
       <CommonDecaySettings settings={settings} onFieldChange={onFieldChange} />
 
-      <SLabel>Color</SLabel>
-      <ColorPicker
-        color={settings.overrideColor}
-        onChange={(newColor) => onFieldChange("overrideColor", newColor)}
-      />
-    </Flex>
+      <Box>
+        <FormLabel>Color</FormLabel>
+        <ColorPicker
+          color={settings.overrideColor}
+          onChange={(newColor) => onFieldChange("overrideColor", newColor)}
+        />
+      </Box>
+    </Stack>
   );
 }

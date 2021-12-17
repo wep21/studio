@@ -11,12 +11,12 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { Box, FormControl, FormHelperText, FormLabel, OutlinedInput, Stack } from "@mui/material";
+
 import { Color } from "@foxglove/regl-worldview";
 import ColorPicker from "@foxglove/studio-base/components/ColorPicker";
-import Flex from "@foxglove/studio-base/components/Flex";
 
 import { TopicSettingsEditorProps } from ".";
-import { SLabel, SDescription, SInput } from "./common";
 
 export type GridSettings = {
   overrideColor?: Color;
@@ -34,73 +34,83 @@ export default function GridSettingsEditor(
   const { settings = {}, onFieldChange } = props;
 
   return (
-    <Flex col>
-      <SLabel>Color</SLabel>
-      <SDescription>Set the grid color.</SDescription>
-      <ColorPicker
-        color={settings.overrideColor ?? DEFAULT_GRID_COLOR}
-        onChange={(newColor) => onFieldChange("overrideColor", newColor)}
-      />
+    <Stack spacing={2} marginBottom={2}>
+      <Stack direction="row" spacing={2}>
+        <FormControl fullWidth>
+          <FormLabel>Line Width</FormLabel>
+          <OutlinedInput
+            data-test="line-width-input"
+            sx={{ input: { width: 200 } }}
+            type="number"
+            placeholder="1"
+            value={settings.lineWidth ?? ""}
+            inputProps={{ min: 0.1, max: 2, step: 0.1 }}
+            size="small"
+            onChange={(e) => {
+              const isInputValid = !isNaN(parseFloat(e.target.value));
+              onFieldChange("lineWidth", isInputValid ? parseFloat(e.target.value) : undefined);
+            }}
+          />
+        </FormControl>
 
-      <SLabel>Line width</SLabel>
-      <SInput
-        data-test="line-width-input"
-        type="number"
-        placeholder={"1"}
-        value={settings.lineWidth ?? ""}
-        min={0.1}
-        max={2}
-        step={0.1}
-        onChange={(e) => {
-          const isInputValid = !isNaN(parseFloat(e.target.value));
-          onFieldChange("lineWidth", isInputValid ? parseFloat(e.target.value) : undefined);
-        }}
-      />
+        <FormControl fullWidth>
+          <FormLabel>Grid Width</FormLabel>
+          <OutlinedInput
+            data-test="width-input"
+            type="number"
+            placeholder={"10"}
+            value={settings.width ?? ""}
+            inputProps={{ min: 1, max: 1000, step: 1 }}
+            size="small"
+            onChange={(e) => {
+              const isInputValid = !isNaN(parseFloat(e.target.value));
+              onFieldChange("width", isInputValid ? parseFloat(e.target.value) : undefined);
+            }}
+          />
+        </FormControl>
+      </Stack>
+      <Stack direction="row" spacing={2}>
+        <FormControl fullWidth>
+          <FormLabel>Subdivisions</FormLabel>
+          <OutlinedInput
+            data-test="subdivisions-input"
+            type="number"
+            placeholder={"9"}
+            value={settings.subdivisions ?? ""}
+            inputProps={{ min: 0, max: 1000, step: 1 }}
+            size="small"
+            onChange={(e) => {
+              const isInputValid = !isNaN(parseFloat(e.target.value));
+              onFieldChange("subdivisions", isInputValid ? parseFloat(e.target.value) : undefined);
+            }}
+          />
+        </FormControl>
 
-      <SLabel>Width</SLabel>
-      <SInput
-        data-test="width-input"
-        type="number"
-        placeholder={"10"}
-        value={settings.width ?? ""}
-        min={1}
-        max={1000}
-        step={1}
-        onChange={(e) => {
-          const isInputValid = !isNaN(parseFloat(e.target.value));
-          onFieldChange("width", isInputValid ? parseFloat(e.target.value) : undefined);
-        }}
-      />
+        <FormControl fullWidth>
+          <FormLabel>Height Offset</FormLabel>
+          <OutlinedInput
+            data-test="height-offset-input"
+            type="number"
+            placeholder={"0"}
+            value={settings.heightOffset ?? ""}
+            inputProps={{ min: -1000, max: 1000, step: 0.1 }}
+            size="small"
+            onChange={(e) => {
+              const isInputValid = !isNaN(parseFloat(e.target.value));
+              onFieldChange("heightOffset", isInputValid ? parseFloat(e.target.value) : undefined);
+            }}
+          />
+        </FormControl>
+      </Stack>
 
-      <SLabel>Subdivisions</SLabel>
-      <SInput
-        data-test="subdivisions-input"
-        type="number"
-        placeholder={"9"}
-        value={settings.subdivisions ?? ""}
-        min={0}
-        max={1000}
-        step={1}
-        onChange={(e) => {
-          const isInputValid = !isNaN(parseFloat(e.target.value));
-          onFieldChange("subdivisions", isInputValid ? parseFloat(e.target.value) : undefined);
-        }}
-      />
-
-      <SLabel>Height offset</SLabel>
-      <SInput
-        data-test="height-offset-input"
-        type="number"
-        placeholder={"0"}
-        value={settings.heightOffset ?? ""}
-        min={-1000}
-        max={1000}
-        step={0.1}
-        onChange={(e) => {
-          const isInputValid = !isNaN(parseFloat(e.target.value));
-          onFieldChange("heightOffset", isInputValid ? parseFloat(e.target.value) : undefined);
-        }}
-      />
-    </Flex>
+      <Stack>
+        <FormLabel>Color</FormLabel>
+        <ColorPicker
+          color={settings.overrideColor ?? DEFAULT_GRID_COLOR}
+          onChange={(newColor) => onFieldChange("overrideColor", newColor)}
+        />
+        <FormHelperText>Set the grid color.</FormHelperText>
+      </Stack>
+    </Stack>
   );
 }

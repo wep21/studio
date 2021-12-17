@@ -11,6 +11,8 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { FormControl, FormLabel, OutlinedInput, Stack } from "@mui/material";
+
 import ColorPicker from "@foxglove/studio-base/components/ColorPicker";
 import Flex from "@foxglove/studio-base/components/Flex";
 import { Color, PoseStamped } from "@foxglove/studio-base/types/Messages";
@@ -47,50 +49,61 @@ export default function PoseSettingsEditor(
   const currentHeadLength = settings.size?.headLength ?? 0.1;
 
   return (
-    <Flex col>
-      <SLabel>Color</SLabel>
-      <ColorPicker
-        color={settings.overrideColor}
-        onChange={(newColor) => onFieldChange("overrideColor", newColor)}
-        alphaType="alpha"
-      />
-      <SLabel>Shaft width</SLabel>
-      <SInput
-        type="number"
-        value={currentShaftWidth}
-        placeholder="2"
-        onChange={(e) =>
-          onSettingsChange({
-            ...settings,
-            size: { ...settings.size, shaftWidth: parseFloat(e.target.value) },
-          })
-        }
-      />
-      <SLabel>Head width</SLabel>
-      <SInput
-        type="number"
-        value={currentHeadWidth}
-        placeholder="2"
-        onChange={(e) =>
-          onSettingsChange({
-            ...settings,
-            size: { ...settings.size, headWidth: parseFloat(e.target.value) },
-          })
-        }
-      />
-      <SLabel>Head length</SLabel>
-      <SInput
-        type="number"
-        value={currentHeadLength}
-        placeholder="0.1"
-        onChange={(e) =>
-          onSettingsChange({
-            ...settings,
-            size: { ...settings.size, headLength: parseFloat(e.target.value) },
-          })
-        }
-      />
-    </Flex>
+    <Stack spacing={2}>
+      <FormControl>
+        <FormLabel>Color</FormLabel>
+        <ColorPicker
+          color={settings.overrideColor}
+          onChange={(newColor) => onFieldChange("overrideColor", newColor)}
+          alphaType="alpha"
+        />
+      </FormControl>
+      <FormControl>
+        <FormLabel>Shaft width</FormLabel>
+        <OutlinedInput
+          type="number"
+          value={currentShaftWidth}
+          placeholder="2"
+          size="small"
+          onChange={(e) =>
+            onSettingsChange({
+              ...settings,
+              size: { ...settings.size, shaftWidth: parseFloat(e.target.value) },
+            })
+          }
+        />
+      </FormControl>
+      <FormControl>
+        <FormLabel>Head width</FormLabel>
+        <OutlinedInput
+          type="number"
+          value={currentHeadWidth}
+          placeholder="2"
+          size="small"
+          onChange={(e) =>
+            onSettingsChange({
+              ...settings,
+              size: { ...settings.size, headWidth: parseFloat(e.target.value) },
+            })
+          }
+        />
+      </FormControl>
+      <FormControl>
+        <FormLabel>Head length</FormLabel>
+        <OutlinedInput
+          type="number"
+          value={currentHeadLength}
+          placeholder="0.1"
+          size="small"
+          onChange={(e) =>
+            onSettingsChange({
+              ...settings,
+              size: { ...settings.size, headLength: parseFloat(e.target.value) },
+            })
+          }
+        />
+      </FormControl>
+    </Stack>
   );
 }
 

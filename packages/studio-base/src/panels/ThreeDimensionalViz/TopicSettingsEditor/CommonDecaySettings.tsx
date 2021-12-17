@@ -11,9 +11,7 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import Flex from "@foxglove/studio-base/components/Flex";
-
-import { SLabel, SDescription, SInput } from "./common";
+import { FormControl, FormHelperText, FormLabel, OutlinedInput } from "@mui/material";
 
 export default function CommonDecaySettings({
   settings,
@@ -26,20 +24,22 @@ export default function CommonDecaySettings({
   const decayTimeValue = decayTime == undefined ? "" : decayTime;
 
   return (
-    <Flex col>
-      <SLabel>Decay time (seconds)</SLabel>
-      <SDescription>When set to 0, only the latest received data will be displayed.</SDescription>
-      <SInput
+    <FormControl>
+      <FormLabel>Decay Time (seconds)</FormLabel>
+      <OutlinedInput
         type="number"
         placeholder="0"
         value={decayTimeValue}
-        min={0}
-        step={0.1}
+        inputProps={{ min: 0, step: 0.1 }}
+        size="small"
         onChange={(e) => {
           const isInputValid = !isNaN(parseFloat(e.target.value));
           onFieldChange("decayTime", isInputValid ? parseFloat(e.target.value) : undefined);
         }}
       />
-    </Flex>
+      <FormHelperText>
+        When set to 0, only the latest received data will be displayed.
+      </FormHelperText>
+    </FormControl>
   );
 }

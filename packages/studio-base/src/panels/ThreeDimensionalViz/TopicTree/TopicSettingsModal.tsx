@@ -11,7 +11,17 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { DefaultButton, Dialog, DialogFooter } from "@fluentui/react";
+import CloseIcon from "@mui/icons-material/Close";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  IconButton,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { isEmpty, omit } from "lodash";
 import React, { useCallback } from "react";
 
@@ -56,12 +66,14 @@ function MainEditor({
           settings={settings}
           onSettingsChange={onSettingsChange}
         />
-        <DialogFooter>
-          <DefaultButton onClick={() => onSettingsChange({})}>Reset to defaults</DefaultButton>
-          <DefaultButton primary onClick={() => setCurrentEditingTopic(undefined)}>
+        <Stack direction="row" spacing={1} justifyContent="flex-end" paddingTop={2}>
+          <Button variant="outlined" onClick={() => onSettingsChange({})}>
+            Reset to defaults
+          </Button>
+          <Button variant="contained" onClick={() => setCurrentEditingTopic(undefined)}>
             Done
-          </DefaultButton>
-        </DialogFooter>
+          </Button>
+        </Stack>
       </div>
     </ErrorBoundary>
   );
@@ -121,26 +133,30 @@ function TopicSettingsModal({
   );
 
   return (
-    <Dialog
-      isOpen
-      onDismiss={() => setCurrentEditingTopic(undefined)}
-      dialogContentProps={{
-        title: currentEditingTopic.name,
-        subText: currentEditingTopic.datatype,
-        showCloseButton: true,
-      }}
-      maxWidth={480}
-      minWidth={480}
-    >
-      <MainEditor
-        collectorMessage={sceneBuilderMessage}
-        datatype={datatype}
-        onFieldChange={onFieldChange}
-        onSettingsChange={onSettingsChange}
-        settings={settingsByKey[topicSettingsKey] ?? {}}
-        topicName={topicName}
-        setCurrentEditingTopic={setCurrentEditingTopic}
-      />
+    <Dialog open={true} onClose={() => setCurrentEditingTopic(undefined)}>
+      <DialogTitle>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          {currentEditingTopic.name}
+          <IconButton onClick={() => setCurrentEditingTopic(undefined)}>
+            <CloseIcon />
+          </IconButton>
+        </Stack>
+      </DialogTitle>
+      <DialogContent>
+        <DialogContentText marginBottom={1}>
+          <Typography variant="subtitle1">Datatype</Typography>
+          <Typography variant="subtitle2">{currentEditingTopic.datatype}</Typography>
+        </DialogContentText>
+        <MainEditor
+          collectorMessage={sceneBuilderMessage}
+          datatype={datatype}
+          onFieldChange={onFieldChange}
+          onSettingsChange={onSettingsChange}
+          settings={settingsByKey[topicSettingsKey] ?? {}}
+          topicName={topicName}
+          setCurrentEditingTopic={setCurrentEditingTopic}
+        />
+      </DialogContent>
     </Dialog>
   );
 }

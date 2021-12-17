@@ -2484,6 +2484,7 @@ __metadata:
     "@foxglove/velodyne-cloud": 1.0.0
     "@foxglove/ws-protocol": 0.0.2
     "@mdi/svg": 6.5.95
+    "@mui/icons-material": 5.2.4
     "@mui/material": 5.1.1
     "@mui/styles": 5.1.1
     "@sentry/core": 6.15.0
@@ -3119,6 +3120,22 @@ __metadata:
     "@types/react":
       optional: true
   checksum: db82bb927b7326bafc8750fc3cfced7cf5aecb680976c5d8afbce306ee23115e42ed401cd921277e238d2dd40928a8a124fa7b4b41ec5433437545e37cd94ac6
+  languageName: node
+  linkType: hard
+
+"@mui/icons-material@npm:5.2.4":
+  version: 5.2.4
+  resolution: "@mui/icons-material@npm:5.2.4"
+  dependencies:
+    "@babel/runtime": ^7.16.3
+  peerDependencies:
+    "@mui/material": ^5.0.0
+    "@types/react": ^16.8.6 || ^17.0.0
+    react: ^17.0.2
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: d2081cf0923183acf9467c060452bcdbef50668be1a0d93b743680be5bae5914ea5aeeb319d214864b4ee5e7c28f775799ba9dcaa01c91ee66aed4543aba1542
   languageName: node
   linkType: hard
 

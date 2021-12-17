@@ -74,6 +74,13 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
         },
       },
     },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: theme.palette.background.default,
+        },
+      },
+    },
     MuiCard: {
       defaultProps: {
         variant: "outlined",
@@ -100,6 +107,11 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
           marginTop: undefined,
           marginRight: undefined,
         },
+      },
+    },
+    MuiFormLabel: {
+      styleOverrides: {
+        root: { lineHeight: 2 },
       },
     },
     MuiListItemIcon: {

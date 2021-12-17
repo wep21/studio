@@ -11,6 +11,15 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import {
+  FormControl,
+  FormLabel,
+  MenuItem,
+  OutlinedInput,
+  Select,
+  Stack,
+  TextField,
+} from "@mui/material";
 import { upperFirst } from "lodash";
 
 import DropdownItem from "@foxglove/studio-base/components/Dropdown/DropdownItem";
@@ -37,42 +46,36 @@ export default function CommonPointSettings({
 
   const pointShape = settings.pointShape;
   const pointShapeVal = pointShape ?? defaultPointShape;
-  const pointShapeOpts = ["circle", "square"].map((field) => (
-    <DropdownItem key={field} value={field}>
-      {upperFirst(field)}
-    </DropdownItem>
-  ));
 
   return (
-    <Flex col>
-      <SLabel>Point size</SLabel>
-      <SInput
-        data-test="point-size-input"
-        type="number"
-        placeholder={defaultPointSize.toString()}
-        value={pointSizeVal}
-        min={1}
-        max={50}
-        step={1}
-        onChange={(e) => {
-          const isInputValid = !isNaN(parseFloat(e.target.value));
-          onFieldChange("pointSize", isInputValid ? parseFloat(e.target.value) : undefined);
-        }}
-      />
+    <Stack direction="row" spacing={2}>
+      <FormControl fullWidth>
+        <FormLabel>Point Size</FormLabel>
+        <OutlinedInput
+          data-test="point-size-input"
+          type="number"
+          size="small"
+          placeholder={defaultPointSize.toString()}
+          value={pointSizeVal}
+          inputProps={{ min: 1, max: 50, step: 1 }}
+          onChange={(e) => {
+            const isInputValid = !isNaN(parseFloat(e.target.value));
+            onFieldChange("pointSize", isInputValid ? parseFloat(e.target.value) : undefined);
+          }}
+        />
+      </FormControl>
 
-      <SLabel>Point shape</SLabel>
-      <Dropdown
-        text={upperFirst(pointShapeVal)}
-        value={pointShapeVal}
-        onChange={(value) => onFieldChange("pointShape", value)}
-        btnStyle={{
-          padding: "8px 12px",
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
-        {pointShapeOpts}
-      </Dropdown>
-    </Flex>
+      <FormControl fullWidth>
+        <FormLabel>Point Shape</FormLabel>
+        <Select
+          value={pointShapeVal}
+          size="small"
+          onChange={(event) => onFieldChange("pointShape", event.target.value)}
+        >
+          <MenuItem value="circle">Circle</MenuItem>
+          <MenuItem value="square">Square</MenuItem>
+        </Select>
+      </FormControl>
+    </Stack>
   );
 }
