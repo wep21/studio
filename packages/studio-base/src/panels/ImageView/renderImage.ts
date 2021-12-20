@@ -43,6 +43,7 @@ const UNCOMPRESSED_IMAGE_DATATYPES = [
   "sensor_msgs/msg/Image",
   "ros.sensor_msgs.Image",
 ];
+
 export const IMAGE_DATATYPES = [
   "sensor_msgs/Image",
   "sensor_msgs/msg/Image",
@@ -51,6 +52,8 @@ export const IMAGE_DATATYPES = [
   "sensor_msgs/msg/CompressedImage",
   "ros.sensor_msgs.CompressedImage",
 ];
+
+type RenderContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 // Just globally keep track of if we've shown an error in rendering, since typically when you get
 // one error, you'd then get a whole bunch more, which is spammy.
@@ -278,7 +281,7 @@ function render({
 }
 
 function paintMarkers(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  ctx: RenderContext,
   messages: MessageEvent<ImageMarker | ImageMarkerArray>[],
   cameraModel: PinholeCameraModel | undefined,
 ) {
@@ -301,7 +304,7 @@ function paintMarkers(
 }
 
 function paintMarker(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  ctx: RenderContext,
   marker: ImageMarker,
   cameraModel: PinholeCameraModel | undefined,
 ) {
@@ -442,7 +445,7 @@ function paintMarker(
 }
 
 function paintLine(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  ctx: RenderContext,
   pointA: Point2D,
   pointB: Point2D,
   thickness: number,
@@ -466,7 +469,7 @@ function paintLine(
 }
 
 function paintCircle(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  ctx: RenderContext,
   point: Point2D,
   radius: number,
   thickness: number,
