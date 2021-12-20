@@ -11,6 +11,7 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { ImageRenderContext } from "@foxglove/studio-base/panels/ImageView/ImageRenderContext";
 import { MessageEvent } from "@foxglove/studio-base/players/types";
 import {
   Image,
@@ -53,7 +54,7 @@ export const IMAGE_DATATYPES = [
   "ros.sensor_msgs.CompressedImage",
 ];
 
-type RenderContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+// type RenderContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 // Just globally keep track of if we've shown an error in rendering, since typically when you get
 // one error, you'd then get a whole bunch more, which is spammy.
@@ -217,14 +218,12 @@ function render({
   markerData: MarkerData | undefined;
 }): Dimensions | undefined {
   const bitmapDimensions = { width: bitmap.width, height: bitmap.height };
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
+  const canvasContext = canvas.getContext("2d");
+  if (!canvasContext) {
     return;
   }
+  canvasContext.imageSmoothingEnabled = imageSmoothing;
 
-  ctx.imageSmoothingEnabled = imageSmoothing;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
   const { markers = [], cameraModel } = markerData ?? {};
 
   const viewportW = canvas.width;
@@ -247,6 +246,10 @@ function render({
   if (zoomMode === "other") {
     imageViewportScale = 1;
   }
+
+  const ctx = new ImageRenderContext(canvasContext, canvas.width, canvas.height);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.save();
 
@@ -281,7 +284,7 @@ function render({
 }
 
 function paintMarkers(
-  ctx: RenderContext,
+  ctx: ImageRenderContext,
   messages: MessageEvent<ImageMarker | ImageMarkerArray>[],
   cameraModel: PinholeCameraModel | undefined,
 ) {
@@ -304,10 +307,12 @@ function paintMarkers(
 }
 
 function paintMarker(
-  ctx: RenderContext,
+  ctx: ImageRenderContext,
   marker: ImageMarker,
   cameraModel: PinholeCameraModel | undefined,
 ) {
+  ctx.startMarker(marker);
+
   switch (marker.type) {
     case ImageMarkerType.CIRCLE: {
       paintCircle(
@@ -445,7 +450,7 @@ function paintMarker(
 }
 
 function paintLine(
-  ctx: RenderContext,
+  ctx: ImageRenderContext,
   pointA: Point2D,
   pointB: Point2D,
   thickness: number,
@@ -469,7 +474,7 @@ function paintLine(
 }
 
 function paintCircle(
-  ctx: RenderContext,
+  ctx: ImageRenderContext,
   point: Point2D,
   radius: number,
   thickness: number,
