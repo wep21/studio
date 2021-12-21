@@ -274,7 +274,7 @@ export default function ImageCanvas(props: Props): JSX.Element {
                 is_bigendian: imageMessage.is_bigendian,
               };
 
-        return worker.send<RenderOutput | undefined>("renderImage", {
+        const result = worker.send<RenderOutput | undefined>("renderImage", {
           id,
           zoomMode: zoom,
           panZoom,
@@ -284,6 +284,8 @@ export default function ImageCanvas(props: Props): JSX.Element {
           rawMarkerData: JSON.parse(JSON.stringify(rawMarkers)),
           options,
         });
+
+        return result;
       };
 
       transfferedCanvasRef.current ??= canvas.transferControlToOffscreen();
@@ -377,7 +379,8 @@ export default function ImageCanvas(props: Props): JSX.Element {
         options: renderOptions,
       });
 
-      setHitmapImageData(output?.imageData);
+      console.log({ output });
+      // setHitmapImageData(output?.imageData);
       return output;
     } finally {
       finishRender();

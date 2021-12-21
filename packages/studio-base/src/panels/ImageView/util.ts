@@ -28,7 +28,7 @@ export type RenderOptions = {
 
 export type Dimensions = { width: number; height: number };
 
-export type RenderOutput = Dimensions & { imageData?: ImageData };
+export type RenderOutput = Dimensions & { ["$$TRANSFERABLES"]?: ImageBitmap };
 
 export type RawMarkerData = {
   markers: MessageEvent<unknown>[];

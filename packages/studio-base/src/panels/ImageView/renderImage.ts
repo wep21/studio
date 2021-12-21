@@ -105,7 +105,7 @@ export async function renderImage({
 
     const dimensions = render({ canvas, zoomMode, panZoom, bitmap, imageSmoothing, markerData });
     bitmap.close();
-    return dimensions;
+    return await dimensions;
   } catch (error) {
     // If there is an error, clear the image and re-throw it.
     clearCanvas(canvas);
@@ -202,7 +202,7 @@ function clearCanvas(canvas?: HTMLCanvasElement | OffscreenCanvas) {
   }
 }
 
-function render({
+async function render({
   canvas,
   zoomMode,
   panZoom,
@@ -216,7 +216,7 @@ function render({
   bitmap: ImageBitmap;
   imageSmoothing: boolean;
   markerData: MarkerData | undefined;
-}): RenderOutput | undefined {
+}): Promise<RenderOutput | undefined> {
   const bitmapDimensions = { width: bitmap.width, height: bitmap.height };
   const canvasContext = canvas.getContext("2d");
   if (!canvasContext) {
@@ -281,7 +281,7 @@ function render({
     ctx.restore();
   }
 
-  return { ...bitmapDimensions, imageData: ctx.getImageData() };
+  return { ...bitmapDimensions, ["$$TRANSFERABLES"]: await ctx.getImageData() };
 }
 
 function paintMarkers(

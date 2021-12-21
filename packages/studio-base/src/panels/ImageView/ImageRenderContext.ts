@@ -23,8 +23,8 @@ export class ImageRenderContext {
     this._hctx = this._offscreenCanvas.getContext("2d") ?? undefined;
   }
 
-  getImageData(): ImageData | undefined {
-    return this._hctx?.getImageData(0, 0, this._width, this._height);
+  async getImageData(): Promise<ImageBitmap> {
+    return await createImageBitmap(this._offscreenCanvas);
   }
 
   startMarker(marker: ImageMarker): void {
