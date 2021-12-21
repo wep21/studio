@@ -216,7 +216,16 @@ export default function PointCloudSettingsEditor(
           {colorMode.mode === "flat" ? ( // For flat mode, pick a single color
             <Grid item xs={6}>
               <FormControl fullWidth>
-                <FormLabel>Mapped Color</FormLabel>
+                <FormLabel
+                  sx={(theme) => ({
+                    position: "relative",
+                    transform: "translate(0) scale(0.875)",
+                    transformOrigin: "top left",
+                    marginTop: theme.spacing(0.25),
+                  })}
+                >
+                  Mapped Color
+                </FormLabel>
                 <ColorPicker
                   color={colorMode.flatColor}
                   onChange={(flatColor) => onColorModeChange(() => ({ mode: "flat", flatColor }))}
@@ -370,7 +379,7 @@ export default function PointCloudSettingsEditor(
         </Grid>
       )}
       {colorMode.mode === "gradient" && (
-        <div style={{ margin: "8px" }}>
+        <Grid item xs={12}>
           <GradientPicker
             minColor={colorMode.minColor ?? DEFAULT_MIN_COLOR}
             maxColor={colorMode.maxColor ?? DEFAULT_MAX_COLOR}
@@ -382,7 +391,7 @@ export default function PointCloudSettingsEditor(
               )
             }
           />
-        </div>
+        </Grid>
       )}
     </Grid>
   );
