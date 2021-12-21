@@ -52,6 +52,7 @@
     "@foxglove/velodyne-cloud": "1.0.0",
     "@foxglove/ws-protocol": "0.0.2",
     "@mdi/svg": "6.5.95",
+    "@mui/icons-material": "5.2.4",
     "@mui/material": "5.1.1",
     "@mui/styles": "5.1.1",
     "@sentry/core": "6.15.0",
@@ -198,8 +199,5 @@
     "wasm-lz4": "2.0.0",
     "webpack": "5.65.0",
     "xacro-parser": "0.3.4"
-  },
-  "dependencies": {
-    "@mui/icons-material": "5.2.4"
   }
 }

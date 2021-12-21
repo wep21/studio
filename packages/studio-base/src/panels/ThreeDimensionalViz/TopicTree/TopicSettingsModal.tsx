@@ -11,7 +11,7 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import CloseIcon from "@mui/icons-material/Close";
+import { Dismiss24Regular } from "@fluentui/react-icons";
 import {
   Button,
   Dialog,
@@ -67,7 +67,7 @@ function MainEditor({
           onSettingsChange={onSettingsChange}
         />
         <Stack direction="row" spacing={1} justifyContent="flex-end" paddingTop={2}>
-          <Button variant="outlined" onClick={() => onSettingsChange({})}>
+          <Button variant="outlined" color="inherit" onClick={() => onSettingsChange({})}>
             Reset to defaults
           </Button>
           <Button variant="contained" onClick={() => setCurrentEditingTopic(undefined)}>
@@ -133,19 +133,21 @@ function TopicSettingsModal({
   );
 
   return (
-    <Dialog open={true} onClose={() => setCurrentEditingTopic(undefined)}>
+    <Dialog fullWidth maxWidth="xs" open={true} onClose={() => setCurrentEditingTopic(undefined)}>
       <DialogTitle>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           {currentEditingTopic.name}
-          <IconButton onClick={() => setCurrentEditingTopic(undefined)}>
-            <CloseIcon />
+          <IconButton edge="end" onClick={() => setCurrentEditingTopic(undefined)}>
+            <Dismiss24Regular />
           </IconButton>
         </Stack>
       </DialogTitle>
       <DialogContent>
-        <DialogContentText marginBottom={1}>
+        <DialogContentText marginBottom={2}>
           <Typography variant="subtitle1">Datatype</Typography>
-          <Typography variant="subtitle2">{currentEditingTopic.datatype}</Typography>
+          <Typography variant="body1" sx={{ color: "text.disabled" }}>
+            {currentEditingTopic.datatype}
+          </Typography>
         </DialogContentText>
         <MainEditor
           collectorMessage={sceneBuilderMessage}

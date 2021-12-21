@@ -12,16 +12,14 @@
 //   You may not use this file except in compliance with the License.
 
 import {
-  Box,
   FormControl,
   FormControlLabel,
   FormLabel,
+  Grid,
   MenuItem,
-  OutlinedInput,
   Radio,
   RadioGroup,
-  Select,
-  Stack,
+  TextField,
 } from "@mui/material";
 import React from "react";
 
@@ -160,17 +158,37 @@ export default function PointCloudSettingsEditor(
   }
 
   return (
-    <Stack spacing={2}>
-      <CommonPointSettings settings={settings} defaultPointSize={2} onFieldChange={onFieldChange} />
-      <CommonDecaySettings settings={settings} onFieldChange={onFieldChange} />
+    <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <CommonPointSettings
+          settings={settings}
+          defaultPointSize={2}
+          onFieldChange={onFieldChange}
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <CommonDecaySettings settings={settings} onFieldChange={onFieldChange} />
+      </Grid>
 
-      <Box>
-        <Stack direction="row" spacing={2}>
-          <FormControl fullWidth>
-            <FormLabel>Color By</FormLabel>
-            <Select
+      <Grid item xs={12}>
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <TextField
+              select
+              variant="outlined"
+              fullWidth
+              label="Color by"
               size="small"
               value={colorMode.mode === "flat" ? "flat" : "data"}
+              InputProps={{ notched: false }}
+              InputLabelProps={{
+                sx: (theme) => ({
+                  position: "relative",
+                  transform: "translate(0) scale(0.875)",
+                  marginTop: theme.spacing(0.25),
+                }),
+              }}
+              FormHelperTextProps={{ variant: "standard" }}
               onChange={({ target: value }) =>
                 onColorModeChange((prevColorMode) => {
                   if (value.value === "flat") {
@@ -193,22 +211,35 @@ export default function PointCloudSettingsEditor(
             >
               <MenuItem value="flat">Flat</MenuItem>
               <MenuItem value="data">Point Data</MenuItem>
-            </Select>
-          </FormControl>
+            </TextField>
+          </Grid>
           {colorMode.mode === "flat" ? ( // For flat mode, pick a single color
-            <FormControl fullWidth>
-              <FormLabel>Mapped Color</FormLabel>
-              <ColorPicker
-                color={colorMode.flatColor}
-                onChange={(flatColor) => onColorModeChange(() => ({ mode: "flat", flatColor }))}
-              />
-            </FormControl>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <FormLabel>Mapped Color</FormLabel>
+                <ColorPicker
+                  color={colorMode.flatColor}
+                  onChange={(flatColor) => onColorModeChange(() => ({ mode: "flat", flatColor }))}
+                />
+              </FormControl>
+            </Grid>
           ) : (
-            <FormControl fullWidth>
-              <FormLabel>Mapped Field</FormLabel>
-              <Select
-                value={colorMode.mode === "rgb" ? "rgb" : colorMode.colorField}
+            <Grid item xs={6}>
+              <TextField
+                variant="outlined"
+                label="Mapped field"
+                fullWidth
+                select
                 size="small"
+                InputProps={{ notched: false }}
+                InputLabelProps={{
+                  sx: (theme) => ({
+                    position: "relative",
+                    transform: "translate(0) scale(0.875)",
+                    marginTop: theme.spacing(0.25),
+                  }),
+                }}
+                FormHelperTextProps={{ variant: "standard" }}
                 onChange={(event) =>
                   onColorModeChange((prevColorMode) => {
                     if (event.target.value === "rgb") {
@@ -226,21 +257,22 @@ export default function PointCloudSettingsEditor(
                     {name}
                   </MenuItem>
                 ))}
-              </Select>
-            </FormControl>
+              </TextField>
+            </Grid>
           )}
-        </Stack>
-      </Box>
+        </Grid>
+      </Grid>
 
       {isMappedColorMode(colorMode) && (
-        <FormControl>
-          <Stack direction="row" spacing={2}>
-            <FormControl>
-              <FormLabel>Min Value</FormLabel>
-              <OutlinedInput
+        <Grid item xs={12}>
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <TextField
+                variant="outlined"
+                label="Min value"
+                fullWidth
                 size="small"
                 type="number"
-                placeholder="auto"
                 value={colorMode.minValue}
                 onChange={({ target: { value } }) =>
                   onColorModeChange((prevColorMode) =>
@@ -249,14 +281,25 @@ export default function PointCloudSettingsEditor(
                       : prevColorMode,
                   )
                 }
+                inputProps={{ placeholder: "auto" }}
+                InputProps={{ notched: false }}
+                InputLabelProps={{
+                  sx: (theme) => ({
+                    position: "relative",
+                    transform: "translate(0) scale(0.875)",
+                    marginTop: theme.spacing(0.25),
+                  }),
+                }}
+                FormHelperTextProps={{ variant: "standard" }}
               />
-            </FormControl>
-            <FormControl>
-              <FormLabel>Max Value</FormLabel>
-              <OutlinedInput
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                variant="outlined"
+                fullWidth
+                label="Max value"
                 size="small"
                 type="number"
-                placeholder="auto"
                 value={colorMode.maxValue ?? ""}
                 onChange={({ target: { value } }) =>
                   onColorModeChange((prevColorMode) =>
@@ -265,50 +308,66 @@ export default function PointCloudSettingsEditor(
                       : prevColorMode,
                   )
                 }
+                inputProps={{ placeholder: "auto" }}
+                InputProps={{ notched: false }}
+                InputLabelProps={{
+                  sx: (theme) => ({
+                    position: "relative",
+                    transform: "translate(0) scale(0.875)",
+                    marginTop: theme.spacing(0.25),
+                  }),
+                }}
+                FormHelperTextProps={{ variant: "standard" }}
               />
-            </FormControl>
-          </Stack>
-        </FormControl>
+            </Grid>
+          </Grid>
+        </Grid>
       )}
       {isMappedColorMode(colorMode) && (
-        <FormControl>
-          <FormLabel component="legend">Point Color Mode</FormLabel>
-          <RadioGroup
-            value={colorMode.mode}
-            onChange={(_, value) =>
-              onColorModeChange((prevColorMode) => {
-                if (isMappedColorMode(prevColorMode)) {
-                  const { colorField, minValue, maxValue } = prevColorMode;
-                  return value === "rainbow"
-                    ? { mode: "rainbow", colorField, minValue, maxValue }
-                    : value === "turbo"
-                    ? { mode: "turbo", colorField, minValue, maxValue }
-                    : {
-                        mode: "gradient",
-                        colorField,
-                        minValue,
-                        maxValue,
-                        minColor: DEFAULT_MIN_COLOR,
-                        maxColor: DEFAULT_MAX_COLOR,
-                      };
-                }
-                return prevColorMode;
-              })
-            }
-          >
-            <FormControlLabel
-              value="turbo"
-              control={<Radio size="small" />}
-              label={<TurboText>Turbo</TurboText>}
-            />
-            <FormControlLabel
-              value="rainbow"
-              control={<Radio size="small" />}
-              label={<RainbowText>Rainbow</RainbowText>}
-            />
-            <FormControlLabel value="gradient" control={<Radio size="small" />} label="Gradient" />
-          </RadioGroup>
-        </FormControl>
+        <Grid item xs={12}>
+          <FormControl>
+            <FormLabel component="legend">Point Color Mode</FormLabel>
+            <RadioGroup
+              value={colorMode.mode}
+              onChange={(_, value) =>
+                onColorModeChange((prevColorMode) => {
+                  if (isMappedColorMode(prevColorMode)) {
+                    const { colorField, minValue, maxValue } = prevColorMode;
+                    return value === "rainbow"
+                      ? { mode: "rainbow", colorField, minValue, maxValue }
+                      : value === "turbo"
+                      ? { mode: "turbo", colorField, minValue, maxValue }
+                      : {
+                          mode: "gradient",
+                          colorField,
+                          minValue,
+                          maxValue,
+                          minColor: DEFAULT_MIN_COLOR,
+                          maxColor: DEFAULT_MAX_COLOR,
+                        };
+                  }
+                  return prevColorMode;
+                })
+              }
+            >
+              <FormControlLabel
+                value="turbo"
+                control={<Radio size="small" />}
+                label={<TurboText>Turbo</TurboText>}
+              />
+              <FormControlLabel
+                value="rainbow"
+                control={<Radio size="small" />}
+                label={<RainbowText>Rainbow</RainbowText>}
+              />
+              <FormControlLabel
+                value="gradient"
+                control={<Radio size="small" />}
+                label="Gradient"
+              />
+            </RadioGroup>
+          </FormControl>
+        </Grid>
       )}
       {colorMode.mode === "gradient" && (
         <div style={{ margin: "8px" }}>
@@ -325,7 +384,7 @@ export default function PointCloudSettingsEditor(
           />
         </div>
       )}
-    </Stack>
+    </Grid>
   );
 }
 

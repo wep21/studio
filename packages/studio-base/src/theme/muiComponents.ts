@@ -3,23 +3,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { Theme, ThemeOptions } from "@mui/material/styles";
-import { CSSProperties } from "@mui/styles";
-
-type MuiLabComponents = {
-  MuiToggleButton?: {
-    styleOverrides?: {
-      root?: CSSProperties;
-      label?: CSSProperties;
-    };
-  };
-  MuiToggleButtonGroup?: {
-    styleOverrides?: {
-      root?: CSSProperties;
-    };
-  };
-};
 
 const iconHack = {
+  ".root-span": {
+    display: "flex",
+  },
   "& svg": {
     fill: "currentColor",
     width: "1em",
@@ -32,7 +20,7 @@ const iconHack = {
   },
 };
 
-export default function muiComponents(theme: Theme): ThemeOptions["components"] & MuiLabComponents {
+export default function muiComponents(theme: Theme): ThemeOptions["components"] {
   const prefersDarkMode = theme.palette.mode === "dark";
 
   return {
@@ -63,17 +51,6 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
       },
     },
     MuiButtonBase: {},
-    MuiIconButton: {
-      defaultProps: {
-        centerRipple: false,
-      },
-      styleOverrides: {
-        root: {
-          borderRadius: theme.shape.borderRadius,
-          ...iconHack,
-        },
-      },
-    },
     MuiDialog: {
       styleOverrides: {
         paper: {
@@ -112,6 +89,17 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
     MuiFormLabel: {
       styleOverrides: {
         root: { lineHeight: 2 },
+      },
+    },
+    MuiIconButton: {
+      defaultProps: {
+        centerRipple: false,
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: theme.shape.borderRadius,
+          ...iconHack,
+        },
       },
     },
     MuiListItemIcon: {
@@ -159,7 +147,10 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
     },
     MuiToggleButton: {
       styleOverrides: {
-        label: iconHack,
+        root: {
+          ...iconHack,
+          padding: 9.5,
+        },
       },
     },
   };
