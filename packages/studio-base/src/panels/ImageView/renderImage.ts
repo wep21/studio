@@ -22,6 +22,7 @@ import {
   ImageMarkerType,
   Point2D,
 } from "@foxglove/studio-base/types/Messages";
+import Rpc from "@foxglove/studio-base/util/Rpc";
 import sendNotification from "@foxglove/studio-base/util/sendNotification";
 
 import PinholeCameraModel from "./PinholeCameraModel";
@@ -103,9 +104,10 @@ export async function renderImage({
       canvas.height = bitmap.height;
     }
 
-    const dimensions = render({ canvas, zoomMode, panZoom, bitmap, imageSmoothing, markerData });
+    const output = render({ canvas, zoomMode, panZoom, bitmap, imageSmoothing, markerData });
     bitmap.close();
-    return await dimensions;
+    const result = await output;
+    return result ? { ...result, [Rpc.transferables]: [result?.hitmap] } : undefined;
   } catch (error) {
     // If there is an error, clear the image and re-throw it.
     clearCanvas(canvas);
@@ -281,7 +283,7 @@ async function render({
     ctx.restore();
   }
 
-  return { ...bitmapDimensions, ["$$TRANSFERABLES"]: await ctx.getImageData() };
+  return { ...bitmapDimensions, hitmap: ctx.getImageData() };
 }
 
 function paintMarkers(

@@ -16,7 +16,7 @@ import Rpc, { Channel } from "@foxglove/studio-base/util/Rpc";
 import { setupWorker } from "@foxglove/studio-base/util/RpcWorkerUtils";
 
 import { renderImage } from "./renderImage";
-import { Dimensions, RawMarkerData, RenderOptions } from "./util";
+import { RawMarkerData, RenderOptions, RenderOutput } from "./util";
 
 class ImageCanvasWorker {
   private _idToCanvas: {
@@ -43,7 +43,7 @@ class ImageCanvasWorker {
         imageMessageDatatype?: string;
         rawMarkerData: RawMarkerData;
         options: RenderOptions;
-      }): Promise<Dimensions | undefined> => {
+      }): Promise<RenderOutput | undefined> => {
         const {
           id,
           zoomMode,

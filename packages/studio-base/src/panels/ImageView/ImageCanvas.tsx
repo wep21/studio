@@ -379,7 +379,6 @@ export default function ImageCanvas(props: Props): JSX.Element {
         options: renderOptions,
       });
 
-      console.log({ output });
       // setHitmapImageData(output?.imageData);
       return output;
     } finally {
