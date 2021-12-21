@@ -4,6 +4,11 @@
 
 import { ImageMarker } from "@foxglove/studio-base/types/Messages";
 
+function toPaddedHexString(n: number, length: number) {
+  const str = n.toString(16);
+  return "0".repeat(length - str.length) + str;
+}
+
 /**
  * This wraps a canvas rendering context to also render a hit map for
  * shapes drawn into that context.
@@ -20,16 +25,24 @@ export class ImageRenderContext {
     private readonly _height: number,
   ) {
     this._offscreenCanvas = new OffscreenCanvas(_width, _height);
-    this._hctx = this._offscreenCanvas.getContext("2d") ?? undefined;
+    this._hctx = this._offscreenCanvas.getContext("2d", { alpha: false }) ?? undefined;
+    if (this._hctx) {
+      this._hctx.imageSmoothingEnabled = false;
+    }
   }
 
-  getImageData(): ImageData | undefined {
-    return this._hctx?.getImageData(0, 0, this._width, this._height);
+  async getImageData(): Promise<ImageBitmap | undefined> {
+    return await createImageBitmap(this._offscreenCanvas);
   }
 
   startMarker(marker: ImageMarker): void {
     this._currentMarkerIndex++;
     this._currentMarker = marker;
+    if (this._hctx) {
+      const colorString = toPaddedHexString(this._currentMarkerIndex, 6);
+      this._hctx.fillStyle = `#${colorString}ff`;
+      this._hctx.strokeStyle = `#${colorString}ff`;
+    }
   }
 
   // eslint-disable-next-line no-restricted-syntax
@@ -53,9 +66,6 @@ export class ImageRenderContext {
   // eslint-disable-next-line no-restricted-syntax
   set fillStyle(style: CanvasRenderingContext2D["fillStyle"]) {
     this._ctx.fillStyle = style;
-    if (this._hctx) {
-      this._hctx.fillStyle = style;
-    }
   }
 
   // eslint-disable-next-line no-restricted-syntax
@@ -79,9 +89,6 @@ export class ImageRenderContext {
   // eslint-disable-next-line no-restricted-syntax
   set strokeStyle(style: CanvasRenderingContext2D["strokeStyle"]) {
     this._ctx.strokeStyle = style;
-    if (this._hctx) {
-      this._hctx.strokeStyle = style;
-    }
   }
 
   // eslint-disable-next-line no-restricted-syntax
@@ -116,7 +123,7 @@ export class ImageRenderContext {
   }
 
   clearRect(x: number, y: number, w: number, h: number): void {
-    this._ctx?.clearRect(x, y, w, h);
+    this._ctx.clearRect(x, y, w, h);
     this._hctx?.clearRect(x, y, w, h);
   }
 
@@ -181,5 +188,6 @@ export class ImageRenderContext {
 
   translate(x: number, y: number): void {
     this._ctx.translate(x, y);
+    this._hctx?.translate(x, y);
   }
 }

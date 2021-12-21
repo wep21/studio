@@ -283,7 +283,7 @@ async function render({
     ctx.restore();
   }
 
-  return { ...bitmapDimensions, hitmap: ctx.getImageData() };
+  return { ...bitmapDimensions, hitmap: await ctx.getImageData() };
 }
 
 function paintMarkers(

@@ -14,12 +14,21 @@
 import { ContextualMenu, makeStyles } from "@fluentui/react";
 import MagnifyIcon from "@mdi/svg/svg/magnify.svg";
 import cx from "classnames";
-import { useCallback, useLayoutEffect, useRef, MouseEvent, useState, useMemo } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  MouseEvent,
+  useState,
+  useMemo,
+  SyntheticEvent,
+} from "react";
 import { useResizeDetector } from "react-resize-detector";
 import { useAsync } from "react-use";
 import usePanZoom from "use-pan-and-zoom";
 import { v4 as uuidv4 } from "uuid";
 
+import Logger from "@foxglove/log";
 import KeyListener from "@foxglove/studio-base/components/KeyListener";
 import { LegacyButton } from "@foxglove/studio-base/components/LegacyStyledComponents";
 import { Item } from "@foxglove/studio-base/components/Menu";
@@ -33,7 +42,10 @@ import { Config, SaveImagePanelConfig } from "./index";
 import { renderImage } from "./renderImage";
 import { RawMarkerData, RenderOptions, RenderOutput } from "./util";
 
+const log = Logger.getLogger(__filename);
+
 type OnFinishRenderImage = () => void;
+
 type Props = {
   topic?: Topic;
   image?: MessageEvent<unknown>;
@@ -172,9 +184,10 @@ export default function ImageCanvas(props: Props): JSX.Element {
 
   const [zoomMode, setZoomMode] = useState<Config["mode"]>(mode);
 
-  const [hitmapImageData, setHitmapImageData] = useState<ImageData | undefined>();
+  const [hitmap, setHitmap] = useState<ImageBitmap | undefined>();
 
   const canvasRef = useRef<HTMLCanvasElement>(ReactNull);
+  const hitCanvasRef = useRef<HTMLCanvasElement>(ReactNull);
 
   // Use a debounce and 0 refresh rate to avoid triggering a resize observation while handling
   // and existing resize observation.
@@ -379,8 +392,16 @@ export default function ImageCanvas(props: Props): JSX.Element {
         options: renderOptions,
       });
 
-      // setHitmapImageData(output?.imageData);
+      // console.log({ hitmap: output?.hitmap });
+      if (output?.hitmap) {
+        hitCanvasRef.current?.getContext("2d")?.clearRect(0, 0, 2000, 2000);
+        hitCanvasRef.current?.getContext("2d")?.drawImage(output.hitmap, 0, 0);
+      }
+      setHitmap(output?.hitmap);
       return output;
+    } catch (e) {
+      log.error(e);
+      return undefined;
     } finally {
       finishRender();
     }
@@ -432,6 +453,20 @@ export default function ImageCanvas(props: Props): JSX.Element {
     resetPanZoom();
     setOpenZoomContext(false);
   }, [resetPanZoom]);
+
+  function onMouseMove(event: MouseEvent<HTMLCanvasElement>) {
+    // const rect = (event.target as HTMLCanvasElement).getBoundingClientRect();
+    const rect = hitCanvasRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
+
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    console.log(x, y);
+    const data = hitCanvasRef.current?.getContext("2d")?.getImageData(x / 2, y / 2, 1, 1);
+    console.log("data", Array.from(data?.data));
+  }
 
   useLayoutEffect(() => {
     saveConfig({
@@ -555,7 +590,9 @@ export default function ImageCanvas(props: Props): JSX.Element {
           [classes.canvasImageRenderingSmooth]: config.smooth === true,
         })}
         ref={canvasRef}
+        onMouseMove={onMouseMove}
       />
+      <canvas ref={hitCanvasRef} className={classes.canvas} style={{ pointerEvents: "none" }} />
       {contextMenuEvent && (
         <ContextualMenu
           target={contextMenuEvent}
