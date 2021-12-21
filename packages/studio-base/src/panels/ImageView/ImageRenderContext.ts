@@ -11,16 +11,20 @@ import { ImageMarker } from "@foxglove/studio-base/types/Messages";
 export class ImageRenderContext {
   private _currentMarkerIndex: number = 0;
   private _currentMarker: ImageMarker | undefined;
-  private _offscreenCanvas: OffscreenCanvas;
-  private _hctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | undefined;
+  private readonly _offscreenCanvas: OffscreenCanvas;
+  private readonly _hctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | undefined;
 
   constructor(
-    private _ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-    width: number,
-    height: number,
+    private readonly _ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    private readonly _width: number,
+    private readonly _height: number,
   ) {
-    this._offscreenCanvas = new OffscreenCanvas(width, height);
+    this._offscreenCanvas = new OffscreenCanvas(_width, _height);
     this._hctx = this._offscreenCanvas.getContext("2d") ?? undefined;
+  }
+
+  getImageData(): ImageData | undefined {
+    return this._hctx?.getImageData(0, 0, this._width, this._height);
   }
 
   startMarker(marker: ImageMarker): void {
@@ -112,7 +116,7 @@ export class ImageRenderContext {
   }
 
   clearRect(x: number, y: number, w: number, h: number): void {
-    this._ctx.clearRect(x, y, w, h);
+    this._ctx?.clearRect(x, y, w, h);
     this._hctx?.clearRect(x, y, w, h);
   }
 

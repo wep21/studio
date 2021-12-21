@@ -28,6 +28,8 @@ export type RenderOptions = {
 
 export type Dimensions = { width: number; height: number };
 
+export type RenderOutput = Dimensions & { imageData?: ImageData };
+
 export type RawMarkerData = {
   markers: MessageEvent<unknown>[];
   transformMarkers: boolean;

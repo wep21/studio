@@ -31,7 +31,7 @@ import { getTimestampForMessage } from "@foxglove/studio-base/util/time";
 
 import { Config, SaveImagePanelConfig } from "./index";
 import { renderImage } from "./renderImage";
-import { Dimensions, RawMarkerData, RenderOptions } from "./util";
+import { RawMarkerData, RenderOptions, RenderOutput } from "./util";
 
 type OnFinishRenderImage = () => void;
 type Props = {
@@ -152,7 +152,7 @@ type RenderImage = (args: {
   imageMessageDatatype?: string;
   rawMarkerData: RawMarkerData;
   options?: RenderOptions;
-}) => Promise<Dimensions | undefined>;
+}) => Promise<RenderOutput | undefined>;
 
 export default function ImageCanvas(props: Props): JSX.Element {
   const {
@@ -171,6 +171,8 @@ export default function ImageCanvas(props: Props): JSX.Element {
   const [error, setError] = useState<Error | undefined>();
 
   const [zoomMode, setZoomMode] = useState<Config["mode"]>(mode);
+
+  const [hitmapImageData, setHitmapImageData] = useState<ImageData | undefined>();
 
   const canvasRef = useRef<HTMLCanvasElement>(ReactNull);
 
@@ -272,7 +274,7 @@ export default function ImageCanvas(props: Props): JSX.Element {
                 is_bigendian: imageMessage.is_bigendian,
               };
 
-        return worker.send<Dimensions | undefined>("renderImage", {
+        return worker.send<RenderOutput | undefined>("renderImage", {
           id,
           zoomMode: zoom,
           panZoom,
@@ -364,7 +366,7 @@ export default function ImageCanvas(props: Props): JSX.Element {
 
     const finishRender = onStartRenderImage();
     try {
-      return await doRenderImage({
+      const output = await doRenderImage({
         canvas: canvasRef.current ?? undefined,
         zoomMode: zoomMode ?? "fit",
         panZoom: computedViewbox,
@@ -374,6 +376,9 @@ export default function ImageCanvas(props: Props): JSX.Element {
         rawMarkerData,
         options: renderOptions,
       });
+
+      setHitmapImageData(output?.imageData);
+      return output;
     } finally {
       finishRender();
     }

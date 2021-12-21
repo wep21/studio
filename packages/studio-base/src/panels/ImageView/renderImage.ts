@@ -37,7 +37,7 @@ import {
   decodeMono8,
   decodeMono16,
 } from "./decodings";
-import { buildMarkerData, Dimensions, RawMarkerData, MarkerData, RenderOptions } from "./util";
+import { buildMarkerData, RawMarkerData, MarkerData, RenderOptions, RenderOutput } from "./util";
 
 const UNCOMPRESSED_IMAGE_DATATYPES = [
   "sensor_msgs/Image",
@@ -77,7 +77,7 @@ export async function renderImage({
   imageMessageDatatype?: string;
   rawMarkerData: RawMarkerData;
   options?: RenderOptions;
-}): Promise<Dimensions | undefined> {
+}): Promise<RenderOutput | undefined> {
   if (!imageMessage || imageMessageDatatype == undefined) {
     clearCanvas(canvas);
     return undefined;
@@ -216,7 +216,7 @@ function render({
   bitmap: ImageBitmap;
   imageSmoothing: boolean;
   markerData: MarkerData | undefined;
-}): Dimensions | undefined {
+}): RenderOutput | undefined {
   const bitmapDimensions = { width: bitmap.width, height: bitmap.height };
   const canvasContext = canvas.getContext("2d");
   if (!canvasContext) {
@@ -280,7 +280,8 @@ function render({
   } finally {
     ctx.restore();
   }
-  return bitmapDimensions;
+
+  return { ...bitmapDimensions, imageData: ctx.getImageData() };
 }
 
 function paintMarkers(
