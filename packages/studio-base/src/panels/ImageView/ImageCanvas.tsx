@@ -14,15 +14,7 @@
 import { ContextualMenu, makeStyles } from "@fluentui/react";
 import MagnifyIcon from "@mdi/svg/svg/magnify.svg";
 import cx from "classnames";
-import {
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  MouseEvent,
-  useState,
-  useMemo,
-  SyntheticEvent,
-} from "react";
+import { useCallback, useLayoutEffect, useRef, MouseEvent, useState, useMemo } from "react";
 import { useResizeDetector } from "react-resize-detector";
 import { useAsync } from "react-use";
 import usePanZoom from "use-pan-and-zoom";
@@ -40,7 +32,7 @@ import { getTimestampForMessage } from "@foxglove/studio-base/util/time";
 
 import { Config, SaveImagePanelConfig } from "./index";
 import { renderImage } from "./renderImage";
-import { RawMarkerData, RenderOptions, RenderOutput } from "./util";
+import { Dimensions, RawMarkerData, RenderOptions, RenderOutput } from "./util";
 
 const log = Logger.getLogger(__filename);
 
@@ -188,6 +180,7 @@ export default function ImageCanvas(props: Props): JSX.Element {
 
   const canvasRef = useRef<HTMLCanvasElement>(ReactNull);
   const hitCanvasRef = useRef<HTMLCanvasElement>(ReactNull);
+  const [bitmapDimensions, setBitmapDimensions] = useState<Dimensions | undefined>();
 
   // Use a debounce and 0 refresh rate to avoid triggering a resize observation while handling
   // and existing resize observation.
@@ -392,11 +385,14 @@ export default function ImageCanvas(props: Props): JSX.Element {
         options: renderOptions,
       });
 
-      // console.log({ hitmap: output?.hitmap });
-      if (output?.hitmap) {
-        hitCanvasRef.current?.getContext("2d")?.clearRect(0, 0, 2000, 2000);
-        hitCanvasRef.current?.getContext("2d")?.drawImage(output.hitmap, 0, 0);
+      if (output?.hitmap && hitCanvasRef.current) {
+        hitCanvasRef.current.height = canvasRef.current.height;
+        hitCanvasRef.current.width = canvasRef.current.width;
+        hitCanvasRef.current.getContext("2d")?.clearRect(0, 0, 2000, 2000);
+        hitCanvasRef.current.getContext("2d")?.drawImage(output.hitmap, 0, 0);
       }
+
+      setBitmapDimensions(output);
       setHitmap(output?.hitmap);
       return output;
     } catch (e) {
@@ -456,16 +452,16 @@ export default function ImageCanvas(props: Props): JSX.Element {
 
   function onMouseMove(event: MouseEvent<HTMLCanvasElement>) {
     // const rect = (event.target as HTMLCanvasElement).getBoundingClientRect();
-    const rect = hitCanvasRef.current?.getBoundingClientRect();
-    if (!rect) {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || !bitmapDimensions) {
       return;
     }
 
     const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    console.log(x, y);
-    const data = hitCanvasRef.current?.getContext("2d")?.getImageData(x / 2, y / 2, 1, 1);
-    console.log("data", Array.from(data?.data));
+    const y = event.clientY - rect.top - (rect.height - bitmapDimensions.height) / 2;
+    console.log(x, y, bitmapDimensions, panX, panX, scaleValue);
+    const data = hitCanvasRef.current?.getContext("2d")?.getImageData(x * 2, y * 2, 1, 1);
+    console.log("data", Array.from(data?.data ?? new Uint8ClampedArray()));
   }
 
   useLayoutEffect(() => {
