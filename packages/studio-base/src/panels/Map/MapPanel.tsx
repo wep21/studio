@@ -147,17 +147,29 @@ function MapPanel(props: MapPanelProps): JSX.Element {
     };
   }, [currentMap, disabledTopicsLatest, layerControl, topicLayers]);
 
+  const [colorScheme, setColorScheme] = useState<string>("dark");
+
   // During the initial mount we setup our context render handler
   useLayoutEffect(() => {
     if (!mapContainerRef.current) {
       return;
     }
 
-    const tileLayer = new TileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-      maxNativeZoom: 18,
-      maxZoom: 24,
-    });
+    const tileLayer =
+      colorScheme === "dark"
+        ? new TileLayer(
+            "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
+            {
+              maxNativeZoom: 18,
+              maxZoom: 24,
+              attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>',
+            },
+          )
+        : new TileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+            maxNativeZoom: 18,
+            maxZoom: 24,
+          });
 
     const satelliteLayer = new TileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -190,6 +202,7 @@ function MapPanel(props: MapPanelProps): JSX.Element {
     context.watch("currentFrame");
     context.watch("allFrames");
     context.watch("previewTime");
+    context.watch("colorScheme");
 
     // layer is added (checked) - remove from disabled list
     map.on("overlayadd", (ev: LayersControlEvent) => {
@@ -223,6 +236,10 @@ function MapPanel(props: MapPanelProps): JSX.Element {
       setRenderDone(() => done);
       setPreviewTime(renderState.previewTime);
 
+      if (renderState.colorScheme && renderState.colorScheme !== colorScheme) {
+        setColorScheme(renderState.colorScheme);
+      }
+
       if (renderState.topics) {
         setTopics(renderState.topics);
       }
@@ -241,7 +258,7 @@ function MapPanel(props: MapPanelProps): JSX.Element {
       map.remove();
       context.onRender = undefined;
     };
-  }, [context, layerControl]);
+  }, [context, colorScheme, layerControl]);
 
   const onHover = useCallback(
     (messageEvent?: MessageEvent<NavSatFixMsg>) => {
