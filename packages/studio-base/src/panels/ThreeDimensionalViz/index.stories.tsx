@@ -3,12 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { quat, vec3 } from "gl-matrix";
+import { useMemo } from "react";
+import { useAsync } from "react-use";
 
 import { RosMsgDefinition } from "@foxglove/rosmsg";
 import { fromSec, Time } from "@foxglove/rostime";
 import { MessageEvent, Topic } from "@foxglove/studio";
 import useDelayedFixture from "@foxglove/studio-base/panels/ThreeDimensionalViz/stories/useDelayedFixture";
-import PanelSetup from "@foxglove/studio-base/stories/PanelSetup";
+import PanelSetup, { Fixture } from "@foxglove/studio-base/stories/PanelSetup";
 import {
   ArrowMarker,
   CubeListMarker,
@@ -18,6 +20,7 @@ import {
   LaserScan,
   LineListMarker,
   LineStripMarker,
+  FoxgloveMsgs$MapTileArray,
   MeshMarker,
   NavMsgs$Path,
   Point,
@@ -843,6 +846,164 @@ export function MarkerLifetimes(): JSX.Element {
   );
 }
 
+export function FoxgloveMsgs_MapTile(): JSX.Element {
+  const { value } = useAsync(async () => {
+    const albedo = await createAlbedo(100, 100);
+    const elevation = await createElevation(100, 100);
+    return { albedo, elevation };
+  }, []);
+
+  const tileArray = useMemo<MessageEvent<FoxgloveMsgs$MapTileArray>>(() => {
+    return {
+      topic: "/map_tiles",
+      receiveTime: { sec: 10, nsec: 0 },
+      message: {
+        tiles: [
+          {
+            header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "map" },
+            pose: { position: { x: -5, y: -5, z: 0 }, orientation: QUAT_IDENTITY },
+            resolution: 0.1,
+            width: 100,
+            height: 100,
+            albedo: { format: "png", data: value?.albedo ?? new Uint8Array() },
+            elevation: { format: "png", data: value?.elevation ?? new Uint8Array() },
+            elevation_scale: 2,
+          },
+        ],
+      },
+      sizeInBytes: 0,
+    };
+  }, [value]);
+
+  const fixture = useMemo<Fixture>(() => {
+    const topics: Topic[] = [
+      { name: "/map_tiles", datatype: "foxglove_msgs/MapTileArray" },
+      { name: "/tf", datatype: "geometry_msgs/TransformStamped" },
+    ];
+    const tf1: MessageEvent<TF> = {
+      topic: "/tf",
+      receiveTime: { sec: 10, nsec: 0 },
+      message: {
+        header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "earth" },
+        child_frame_id: "map",
+        transform: {
+          translation: { x: 1e7, y: 0, z: 0 },
+          rotation: QUAT_IDENTITY,
+        },
+      },
+      sizeInBytes: 0,
+    };
+    const tf2: MessageEvent<TF> = {
+      topic: "/tf",
+      receiveTime: { sec: 10, nsec: 0 },
+      message: {
+        header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "map" },
+        child_frame_id: "base_link",
+        transform: {
+          translation: { x: 0, y: 0, z: 1 },
+          rotation: QUAT_IDENTITY,
+        },
+      },
+      sizeInBytes: 0,
+    };
+
+    return {
+      datatypes,
+      topics,
+      frame: {
+        "/map_tiles": [tileArray],
+        "/tf": [tf1, tf2],
+      },
+      capabilities: [],
+      activeData: {
+        currentTime: { sec: 0, nsec: 0 },
+      },
+    };
+  }, [tileArray]);
+
+  return (
+    <PanelSetup fixture={fixture}>
+      <ThreeDimensionalViz
+        overrideConfig={{
+          ...ThreeDimensionalViz.defaultConfig,
+          checkedKeys: ["name:Topics", "t:/tf", "t:/map_tiles", `t:${FOXGLOVE_GRID_TOPIC}`],
+          expandedKeys: ["name:Topics", "t:/tf", "t:/map_tiles", `t:${FOXGLOVE_GRID_TOPIC}`],
+          followTf: "base_link",
+          cameraState: {
+            distance: 13.5,
+            perspective: true,
+            phi: 1.22,
+            targetOffset: [0.25, -0.5, 0],
+            thetaOffset: -0.33,
+            fovy: 0.75,
+            near: 0.01,
+            far: 5000,
+            target: [0, 0, 0],
+            targetOrientation: [0, 0, 0, 1],
+          },
+        }}
+      />
+    </PanelSetup>
+  );
+}
+
+async function createAlbedo(width: number, height: number): Promise<Uint8Array> {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const r = Math.hypot(x - width / 2, y - height / 2) / 4;
+      const z = Math.trunc(((Math.sin(r) + 1) / 2) * 255);
+      data[i] = z; // r
+      data[i + 1] = Math.trunc((x / width) * 255); // g
+      data[i + 2] = Math.trunc((y / height) * 255); // b
+      data[i + 3] = 255; // a
+    }
+  }
+  return await createPng(width, height, data);
+}
+
+async function createElevation(width: number, height: number): Promise<Uint8Array> {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const r = Math.hypot(x - width / 2, y - height / 2) / 4;
+      const z = Math.trunc(((Math.sin(r) + 1) / 2) * 255);
+      data[i] = z;
+      data[i + 1] = z;
+      data[i + 2] = z;
+      data[i + 3] = 255; // a
+    }
+  }
+  return await createPng(width, height, data);
+}
+
+async function createPng(
+  width: number,
+  height: number,
+  data: Uint8ClampedArray,
+): Promise<Uint8Array> {
+  const imgData = new ImageData(width, height);
+  imgData.data.set(data);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.putImageData(imgData, 0, 0);
+
+  return await new Promise<Uint8Array>((resolve, reject) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        return reject();
+      }
+      const buffer = await blob.arrayBuffer();
+      resolve(new Uint8Array(buffer));
+    });
+  });
+}
+
 export function GeometryMsgs_Polygon(): JSX.Element {
   const topics: Topic[] = [
     { name: "/polygon", datatype: "geometry_msgs/PolygonStamped" },
@@ -1549,6 +1710,7 @@ export function LargeTransform(): JSX.Element {
   );
 }
 
+FoxgloveMsgs_MapTile.parameters = { colorScheme: "dark" };
 GeometryMsgs_Polygon.parameters = { colorScheme: "dark" };
 LargeTransform.parameters = { colorScheme: "dark" };
 MarkerLifetimes.parameters = { colorScheme: "dark" };

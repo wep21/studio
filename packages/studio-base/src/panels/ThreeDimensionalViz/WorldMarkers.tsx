@@ -33,6 +33,7 @@ import {
   PointClouds,
   PoseMarkers,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/commands";
+import MapTiles from "@foxglove/studio-base/panels/ThreeDimensionalViz/commands/MapTiles";
 import MeshMarkers from "@foxglove/studio-base/panels/ThreeDimensionalViz/commands/MeshMarkers";
 import {
   LAYER_INDEX_TEXT,
@@ -71,6 +72,7 @@ export type InteractiveMarkersByType = {
   laserScan: Interactive<BaseMarker>[];
   lineList: Interactive<LineListMarker>[];
   lineStrip: Interactive<LineStripMarker>[];
+  mapTile: Interactive<BaseMarker>[];
   mesh: Interactive<MeshMarker>[];
   pointcloud: Interactive<SphereMarker>[];
   points: Interactive<PointsMarker>[];
@@ -151,6 +153,7 @@ export default function WorldMarkers({
     laserScan,
     lineList,
     lineStrip,
+    mapTile,
     mesh,
     pointcloud,
     points,
@@ -186,6 +189,10 @@ export default function WorldMarkers({
   return (
     <>
       <Cover color={backdropColor} />
+      <Lines getChildrenForHitmap={getChildrenForHitmap} layerIndex={layerIndex}>
+        {[...instancedLineList]}
+      </Lines>
+      <MapTiles layerIndex={layerIndex}>{mapTile}</MapTiles>
       <OccupancyGrids layerIndex={(layerIndex as number) + LAYER_INDEX_OCCUPANCY_GRIDS}>
         {grid}
       </OccupancyGrids>
@@ -215,7 +222,7 @@ export default function WorldMarkers({
         </GLText>
       )}
       <Lines getChildrenForHitmap={getChildrenForHitmap} layerIndex={layerIndex}>
-        {[...instancedLineList, ...groupedLines]}
+        {[...groupedLines]}
       </Lines>
       <MeshMarkers layerIndex={layerIndex} markers={mesh}></MeshMarkers>
     </>

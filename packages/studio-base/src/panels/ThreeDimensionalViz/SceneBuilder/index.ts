@@ -52,6 +52,9 @@ import {
   LaserScan,
   OccupancyGridMessage,
   PointCloud2,
+  MapTileMessage,
+  FoxgloveMsgs$MapTile,
+  FoxgloveMsgs$MapTileArray,
 } from "@foxglove/studio-base/types/Messages";
 import { clonePose, emptyPose } from "@foxglove/studio-base/util/Pose";
 import naturalSort from "@foxglove/studio-base/util/naturalSort";
@@ -610,32 +613,27 @@ export default class SceneBuilder implements MarkerProvider {
 
   private _consumeNonMarkerMessage = (
     topic: string,
-    drawData: StampedMessage,
+    drawData: StampedMessage & Record<string, unknown>,
     type: number,
     originalMessage?: unknown,
   ): void => {
-    // some callers of _consumeNonMarkerMessage provide LazyMessages and others provide regular objects
-    const obj =
-      "toJSON" in drawData
-        ? (drawData as unknown as { toJSON: () => Record<string, unknown> }).toJSON()
-        : drawData;
     const mappedMessage = {
-      ...obj,
+      ...drawData,
       type,
-      pose: emptyPose(),
+      pose: drawData.pose ?? emptyPose(),
       frame_locked: false,
       interactionData: { topic, originalMessage: originalMessage ?? drawData },
     };
 
     if (type === 102) {
       // We don't support big-endian point clouds yet. Register an error and omit this marker.
-      if (obj.is_bigendian === true) {
+      if (drawData.is_bigendian === true) {
         this._setTopicError(topic, "Unsupported big endian point cloud.");
         return;
       }
 
       // Register a per-topic error for empty point cloud data and omit this marker.
-      if (obj.data instanceof Uint8Array && obj.data.length === 0) {
+      if (drawData.data instanceof Uint8Array && drawData.data.length === 0) {
         this._setTopicError(topic, "Point cloud data is empty.");
         return;
       }
@@ -778,6 +776,18 @@ export default class SceneBuilder implements MarkerProvider {
         );
         break;
       }
+      case "foxglove_msgs/MapTile": {
+        const mapTile = message as FoxgloveMsgs$MapTile;
+        this._consumeNonMarkerMessage(topic, mapTile, 111);
+        break;
+      }
+      case "foxglove_msgs/MapTileArray": {
+        const mapTileArray = message as FoxgloveMsgs$MapTileArray;
+        for (const mapTile of mapTileArray.tiles) {
+          this._consumeNonMarkerMessage(topic, mapTile, 111);
+        }
+        break;
+      }
       default: {
         if (datatype.endsWith("/Color") || datatype.endsWith("/ColorRGBA")) {
           this._consumeColor(msg as MessageEvent<Color>);
@@ -892,6 +902,7 @@ export default class SceneBuilder implements MarkerProvider {
     let marker = originalMarker as
       | Marker
       | OccupancyGridMessage
+      | MapTileMessage
       | PointCloud2
       | (PoseStamped & { type: 103 })
       | (LaserScan & { type: 104; pose: MutablePose });
@@ -914,12 +925,13 @@ export default class SceneBuilder implements MarkerProvider {
       case 9: // TextMarker
       case 10: // MeshMarker
       case 11: // TriangleListMarker
+      case 101: // OccupancyGridMessage
       case 102: // PointCloud2
       case 103: // PoseStamped
+      case 104: // LaserScan
       case 108: // InstanceLineListMarker
       case 110: // ColorMarker
-      case 101: // OccupancyGridMessage
-      case 104: // LaserScan
+      case 111: // MapTileMessage
         marker = { ...marker, pose };
         break;
       default:
@@ -963,6 +975,8 @@ export default class SceneBuilder implements MarkerProvider {
         return add.instancedLineList(marker);
       case 110:
         return add.color(marker);
+      case 111:
+        return add.mapTile(marker);
       default: {
         this._setTopicError(
           topic.name,

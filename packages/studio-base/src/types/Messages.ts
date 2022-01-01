@@ -272,6 +272,32 @@ export type ColorMarker = Readonly<
   }
 >;
 
+export type MapTileImage = Readonly<{
+  format: string;
+  data: Uint8Array;
+}>;
+
+export type FoxgloveMsgs$MapTile = Readonly<{
+  header: Header;
+  pose: Pose;
+  resolution: number;
+  width: number;
+  height: number;
+  albedo: MapTileImage;
+  elevation: MapTileImage;
+  elevation_scale: number;
+}>;
+
+export type FoxgloveMsgs$MapTileArray = Readonly<{
+  tiles: readonly FoxgloveMsgs$MapTile[];
+}>;
+
+export type MapTileMessage = Readonly<
+  FoxgloveMsgs$MapTile & {
+    type: 111;
+  }
+>;
+
 export type Marker =
   | ArrowMarker
   | CubeMarker

@@ -32,6 +32,7 @@ import {
   ColorMarker,
   PoseStamped,
   MeshMarker,
+  MapTileMessage,
 } from "@foxglove/studio-base/types/Messages";
 
 import { TopicSettingsCollection } from "./SceneBuilder";
@@ -62,6 +63,7 @@ export interface MarkerCollector {
   lineList(arg0: LineListMarker): void;
   points(arg0: PointsMarker): void;
   text(arg0: TextMarker): void;
+  mapTile(arg0: MapTileMessage): void;
   mesh(arg0: MeshMarker): void;
   triangleList(arg0: TriangleListMarker): void;
   grid(arg0: OccupancyGridMessage): void;
