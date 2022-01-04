@@ -149,12 +149,10 @@ function MapPanel(props: MapPanelProps): JSX.Element {
 
   const [colorScheme, setColorScheme] = useState<string>("dark");
 
-  // During the initial mount we setup our context render handler
-  useLayoutEffect(() => {
-    if (!mapContainerRef.current) {
-      return;
-    }
+  // The tile layer group holds the tile layer which may change depending on the color scheme
+  const tileLayerGroup = useMemo(() => new LayerGroup(), []);
 
+  useLayoutEffect(() => {
     const tileLayer =
       colorScheme === "dark"
         ? new TileLayer(
@@ -171,6 +169,18 @@ function MapPanel(props: MapPanelProps): JSX.Element {
             maxZoom: 24,
           });
 
+    tileLayerGroup.addLayer(tileLayer);
+    return () => {
+      tileLayerGroup.removeLayer(tileLayer);
+    };
+  }, [colorScheme, currentMap, layerControl, tileLayerGroup]);
+
+  // During the initial mount we setup our context render handler
+  useLayoutEffect(() => {
+    if (!mapContainerRef.current) {
+      return;
+    }
+
     const satelliteLayer = new TileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       {
@@ -183,14 +193,14 @@ function MapPanel(props: MapPanelProps): JSX.Element {
 
     const map = new LeafMap(mapContainerRef.current, {
       // sets the tile layer as the default
-      layers: [tileLayer],
+      layers: [tileLayerGroup],
     });
 
     // the map must be initialized with some view before other features work
     map.setView([0, 0], 10);
 
     // layer controls for user selection between satellite and map
-    layerControl.addBaseLayer(tileLayer, "map");
+    layerControl.addBaseLayer(tileLayerGroup, "map");
     layerControl.addBaseLayer(satelliteLayer, "satellite");
     layerControl.setPosition("topleft");
     layerControl.addTo(map);
@@ -236,7 +246,7 @@ function MapPanel(props: MapPanelProps): JSX.Element {
       setRenderDone(() => done);
       setPreviewTime(renderState.previewTime);
 
-      if (renderState.colorScheme && renderState.colorScheme !== colorScheme) {
+      if (renderState.colorScheme) {
         setColorScheme(renderState.colorScheme);
       }
 
@@ -258,7 +268,7 @@ function MapPanel(props: MapPanelProps): JSX.Element {
       map.remove();
       context.onRender = undefined;
     };
-  }, [context, colorScheme, layerControl]);
+  }, [context, layerControl, tileLayerGroup]);
 
   const onHover = useCallback(
     (messageEvent?: MessageEvent<NavSatFixMsg>) => {
