@@ -29,7 +29,7 @@ OFFSET_MESSAGE.longitude += 0.1;
 export default {
   title: "panels/Map",
   component: MapPanel,
-  parameters: { colorScheme: "dark" },
+  parameters: { colorScheme: "both" },
   decorators: [
     (StoryComponent: Story, { parameters }: StoryContext): JSX.Element => {
       return (
