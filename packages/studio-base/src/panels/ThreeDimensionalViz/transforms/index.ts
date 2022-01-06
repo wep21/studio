@@ -7,5 +7,5 @@
 export const DEFAULT_FRAME_IDS = ["base_link", "odom", "map", "earth"];
 
 export * from "./CoordinateFrame";
+export * from "./RosTransformTree";
 export * from "./Transform";
-export * from "./TransformTree";

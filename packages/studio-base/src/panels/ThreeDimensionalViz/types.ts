@@ -37,7 +37,7 @@ import {
 import { TopicSettingsCollection } from "./SceneBuilder";
 import { ColorOverrideByVariable, ColorOverride } from "./TopicTree/Layout";
 import { TopicDisplayMode } from "./TopicTree/types";
-import { CoordinateFrame, TransformTree } from "./transforms";
+import { CoordinateFrame, RosTransformTree } from "./transforms";
 
 /** @deprecated */
 type ColorOverrideBySourceIdxByVariable = Record<string, ColorOverride[]>;
@@ -74,7 +74,7 @@ export type RenderMarkerArgs = {
   add: MarkerCollector;
   renderFrame: CoordinateFrame;
   fixedFrame: CoordinateFrame;
-  transforms: TransformTree;
+  transforms: RosTransformTree;
   time: Time;
 };
 

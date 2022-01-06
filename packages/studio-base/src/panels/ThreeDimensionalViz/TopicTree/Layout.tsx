@@ -69,7 +69,7 @@ import {
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/threeDimensionalVizUtils";
 import {
   CoordinateFrame,
-  TransformTree,
+  RosTransformTree,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
 import {
   FollowMode,
@@ -96,12 +96,12 @@ export type LayoutToolbarSharedProps = {
   onCameraStateChange: (arg0: CameraState) => void;
   onFollowChange: (followTf?: string, followMode?: FollowMode) => void;
   saveConfig: Save3DConfig;
-  transforms: TransformTree;
+  transforms: RosTransformTree;
   isPlaying?: boolean;
 };
 
 export type LayoutTopicSettingsSharedProps = {
-  transforms: TransformTree;
+  transforms: RosTransformTree;
   topics: readonly Topic[];
   saveConfig: Save3DConfig;
 };

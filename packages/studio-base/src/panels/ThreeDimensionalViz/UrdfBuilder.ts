@@ -31,7 +31,7 @@ import { UrdfSettings } from "@foxglove/studio-base/panels/ThreeDimensionalViz/T
 import {
   CoordinateFrame,
   Transform,
-  TransformTree,
+  RosTransformTree,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
 import {
   Color,
@@ -170,7 +170,7 @@ export default class UrdfBuilder implements MarkerProvider {
     }
   }
 
-  private update(transforms: TransformTree): void {
+  private update(transforms: RosTransformTree): void {
     if (!this._urdf) {
       return;
     }
@@ -410,7 +410,7 @@ function getColor(visual: UrdfVisual, robot: UrdfRobot): Color {
 
 function updatePose(
   marker: Marker,
-  transforms: TransformTree,
+  transforms: RosTransformTree,
   renderFrame: CoordinateFrame,
   fixedFrame: CoordinateFrame,
   time: Time,

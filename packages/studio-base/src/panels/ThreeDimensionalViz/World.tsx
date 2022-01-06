@@ -33,7 +33,7 @@ import WorldMarkers, {
 import { LAYER_INDEX_DEFAULT_BASE } from "@foxglove/studio-base/panels/ThreeDimensionalViz/constants";
 import {
   CoordinateFrame,
-  TransformTree,
+  RosTransformTree,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
 import withHighlights from "@foxglove/studio-base/panels/ThreeDimensionalViz/withHighlights";
 import inScreenshotTests from "@foxglove/studio-base/stories/inScreenshotTests";
@@ -60,7 +60,7 @@ type Props = WorldSearchTextProps & {
   cameraState: CameraState;
   children?: React.ReactNode;
   isPlaying: boolean;
-  transforms: TransformTree;
+  transforms: RosTransformTree;
   renderFrame: CoordinateFrame;
   fixedFrame: CoordinateFrame;
   currentTime: Time;
@@ -83,7 +83,7 @@ function getMarkers({
 }: {
   markers: InteractiveMarkersByType;
   markerProviders: MarkerProvider[];
-  transforms: TransformTree;
+  transforms: RosTransformTree;
   renderFrame: CoordinateFrame;
   fixedFrame: CoordinateFrame;
   time: Time;

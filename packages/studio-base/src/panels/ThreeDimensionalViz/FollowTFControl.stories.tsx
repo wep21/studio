@@ -5,7 +5,7 @@
 import { action } from "@storybook/addon-actions";
 import { Story } from "@storybook/react";
 
-import { TransformTree } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
+import { RosTransformTree } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
 
 import FollowTFControl from "./FollowTFControl";
 
@@ -18,7 +18,7 @@ export const NoTransformsNoFollow: Story = () => {
   return (
     <FollowTFControl
       followMode="no-follow"
-      transforms={new TransformTree()}
+      transforms={new RosTransformTree()}
       onFollowChange={action("onFollowChange")}
     />
   );
@@ -29,14 +29,14 @@ export const NoTransforms: Story = () => {
     <FollowTFControl
       followTf="some_frame"
       followMode="no-follow"
-      transforms={new TransformTree()}
+      transforms={new RosTransformTree()}
       onFollowChange={action("onFollowChange")}
     />
   );
 };
 
 export const FollowNotFound: Story = () => {
-  const tree = new TransformTree();
+  const tree = new RosTransformTree();
   tree.getOrCreateFrame("new_frame");
 
   return (
@@ -50,7 +50,7 @@ export const FollowNotFound: Story = () => {
 };
 
 export const Following: Story = () => {
-  const tree = new TransformTree();
+  const tree = new RosTransformTree();
   tree.getOrCreateFrame("new_frame");
 
   return (

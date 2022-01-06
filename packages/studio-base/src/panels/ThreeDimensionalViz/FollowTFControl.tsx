@@ -21,7 +21,7 @@ import { useTooltip } from "@foxglove/studio-base/components/Tooltip";
 import { FollowMode } from "@foxglove/studio-base/panels/ThreeDimensionalViz/types";
 import { colors } from "@foxglove/studio-base/util/sharedStyleConstants";
 
-import { TransformTree, CoordinateFrame } from "./transforms";
+import { RosTransformTree, CoordinateFrame } from "./transforms";
 
 type TfTreeNode = {
   tf: CoordinateFrame;
@@ -83,7 +83,7 @@ const buildTfTree = (transforms: CoordinateFrame[]): TfTree => {
 };
 
 type Props = {
-  transforms: TransformTree;
+  transforms: RosTransformTree;
   followTf?: string;
   followMode: FollowMode;
   onFollowChange: (tfId?: string, followMode?: FollowMode) => void;

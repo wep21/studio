@@ -24,7 +24,7 @@ import { MarkerMatcher } from "@foxglove/studio-base/panels/ThreeDimensionalViz/
 import VelodyneCloudConverter from "@foxglove/studio-base/panels/ThreeDimensionalViz/VelodyneCloudConverter";
 import {
   CoordinateFrame,
-  TransformTree,
+  RosTransformTree,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
 import {
   MarkerProvider,
@@ -97,7 +97,7 @@ type MarkerMatchersByTopic = {
 const missingTransformMessage = (
   renderFrameId: string,
   error: ErrorDetails,
-  transforms: TransformTree,
+  transforms: RosTransformTree,
 ): string => {
   if (error.frameIds.size === 0) {
     throw new Error(`Missing transform error has no frameIds`);
@@ -113,7 +113,7 @@ const missingTransformMessage = (
 
 export function getSceneErrorsByTopic(
   sceneErrors: SceneErrors,
-  transforms: TransformTree,
+  transforms: RosTransformTree,
 ): {
   [topicName: string]: string[];
 } {
@@ -176,7 +176,7 @@ export function filterOutSupersededMessages<T extends Pick<MessageEvent<unknown>
 
 function computeMarkerPose(
   marker: Marker,
-  transforms: TransformTree,
+  transforms: RosTransformTree,
   renderFrame: CoordinateFrame,
   fixedFrame: CoordinateFrame,
   currentTime: Time,
@@ -222,7 +222,7 @@ export default class SceneBuilder implements MarkerProvider {
   collectors: {
     [key: string]: MessageCollector;
   } = {};
-  private _transforms?: TransformTree;
+  private _transforms?: RosTransformTree;
   private _missingTfFrameIds = new Set<string>();
   private _clock?: Time;
   private _playerId?: string;

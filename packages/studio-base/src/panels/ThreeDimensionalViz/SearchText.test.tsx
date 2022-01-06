@@ -23,7 +23,7 @@ import {
   getHighlightedIndices,
   useSearchMatches,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/SearchText";
-import { TransformTree } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
+import { RosTransformTree } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
 import { TextMarker, TF } from "@foxglove/studio-base/types/Messages";
 import { MARKER_MSG_TYPES } from "@foxglove/studio-base/util/globalConstants";
 
@@ -182,8 +182,8 @@ describe("<SearchText />", () => {
   describe("useCurrentMatchPosition", () => {
     const p = (x: number = 0, y = x, z = x) => ({ x, y, z });
     const q = (x = 0, y = 0, z = 0, w = 0) => ({ x, y, z, w });
-    const getTf = (): TransformTree => {
-      const tree = new TransformTree();
+    const getTf = (): RosTransformTree => {
+      const tree = new RosTransformTree();
       const tf: TF = {
         header,
         child_frame_id: CHILD_FRAME_ID,

@@ -17,13 +17,13 @@ import {
   TF_DATATYPES,
   TRANSFORM_STAMPED_DATATYPES,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/constants";
-import { TransformTree } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
+import { RosTransformTree } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
 import { Frame, MessageEvent, Topic } from "@foxglove/studio-base/players/types";
 import { MarkerArray, StampedMessage, TF } from "@foxglove/studio-base/types/Messages";
 
 type TfMessage = { transforms: TF[] };
 
-function consumeTfs(tfs: MessageEvent<TfMessage>[], transforms: TransformTree): void {
+function consumeTfs(tfs: MessageEvent<TfMessage>[], transforms: RosTransformTree): void {
   for (const { message } of tfs) {
     const parsedMessage = message;
     for (const tf of parsedMessage.transforms) {
@@ -32,7 +32,7 @@ function consumeTfs(tfs: MessageEvent<TfMessage>[], transforms: TransformTree): 
   }
 }
 
-function consumeSingleTfs(tfs: MessageEvent<TF>[], transforms: TransformTree): void {
+function consumeSingleTfs(tfs: MessageEvent<TF>[], transforms: RosTransformTree): void {
   for (const { message } of tfs) {
     transforms.addTransformMessage(message);
   }
@@ -47,16 +47,16 @@ function consumeSingleTfs(tfs: MessageEvent<TF>[], transforms: TransformTree): v
  * If the frame is undefined, transform accumulation is reset and all existing transforms are discarded.
  */
 // eslint-disable-next-line @foxglove/no-boolean-parameters
-function useTransforms(topics: readonly Topic[], frame: Frame, reset: boolean): TransformTree {
+function useTransforms(topics: readonly Topic[], frame: Frame, reset: boolean): RosTransformTree {
   const topicsToDatatypes = useMemo(() => {
     return new Map<string, string>(topics.map((topic) => [topic.name, topic.datatype]));
   }, [topics]);
 
-  const transformsRef = useRef(new TransformTree());
+  const transformsRef = useRef(new RosTransformTree());
 
-  return useMemo<TransformTree>(() => {
+  return useMemo<RosTransformTree>(() => {
     if (reset) {
-      transformsRef.current = new TransformTree();
+      transformsRef.current = new RosTransformTree();
     }
 
     const transforms = transformsRef.current;
@@ -109,7 +109,7 @@ function useTransforms(topics: readonly Topic[], frame: Frame, reset: boolean): 
 
     // clone the transforms object if there were updates
     // This creates a new reference identity for the returned transforms so memoization can update
-    const newTransforms = TransformTree.Clone(transforms);
+    const newTransforms = RosTransformTree.Clone(transforms);
     return (transformsRef.current = newTransforms);
   }, [reset, frame, topicsToDatatypes]);
 }
