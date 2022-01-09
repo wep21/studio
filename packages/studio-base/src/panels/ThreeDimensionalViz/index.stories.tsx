@@ -56,10 +56,11 @@ function makeColor(hex: string, alpha?: number) {
 
 function rgba(r: number, g: number, b: number, a: number) {
   return (
-    (Math.trunc(r * 255) << 24) |
-    (Math.trunc(g * 255) << 16) |
-    (Math.trunc(b * 255) << 8) |
-    Math.trunc(a * 255)
+    ((Math.trunc(r * 255) << 24) |
+      (Math.trunc(g * 255) << 16) |
+      (Math.trunc(b * 255) << 8) |
+      Math.trunc(a * 255)) >>>
+    0
   );
 }
 
