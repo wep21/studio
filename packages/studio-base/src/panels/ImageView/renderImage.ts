@@ -118,7 +118,7 @@ function toRGBA(color: Color) {
 }
 
 function maybeUnrectifyPoint(cameraModel: PinholeCameraModel | undefined, point: Point2D): Point2D {
-  return cameraModel?.unrectifyPoint(point) ?? point;
+  return cameraModel?.unrectifyPoint({ x: 0, y: 0 }, point) ?? point;
 }
 
 // Potentially performance-sensitive; await can be expensive
