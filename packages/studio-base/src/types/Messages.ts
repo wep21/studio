@@ -35,6 +35,23 @@ export type MutablePoint2D = {
 };
 export type Point2D = Readonly<MutablePoint2D>;
 
+export type Mat3 = [number, number, number, number, number, number, number, number, number];
+
+export type Mat34 = [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];
+
 export type Header = Readonly<{
   frame_id: string;
   stamp: Time;
@@ -425,19 +442,18 @@ type Roi = Readonly<{
   do_rectify: false;
 }>;
 
-type DistortionModel = "plumb_bob" | "rational_polynomial";
-
 export type CameraInfo = Readonly<{
+  header: Header;
   width: number;
   height: number;
   binning_x: number;
   binning_y: number;
   roi: Roi;
-  distortion_model: DistortionModel;
-  D: readonly number[];
-  K: readonly number[];
-  P: readonly number[];
-  R: readonly number[];
+  distortion_model: string;
+  D: ReadonlyArray<number>;
+  K: ReadonlyArray<number>;
+  P: ReadonlyArray<number>;
+  R: ReadonlyArray<number>;
 }>;
 
 export type JointState = Readonly<{
