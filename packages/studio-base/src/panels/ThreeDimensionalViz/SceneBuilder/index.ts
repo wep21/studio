@@ -621,11 +621,7 @@ export default class SceneBuilder implements MarkerProvider {
     type: number,
     originalMessage?: unknown,
   ): void => {
-    // some callers of _consumeNonMarkerMessage provide LazyMessages and others provide regular objects
-    const obj =
-      "toJSON" in drawData
-        ? (drawData as unknown as { toJSON: () => Record<string, unknown> }).toJSON()
-        : drawData;
+    const obj = drawData as Record<string, unknown>;
     const mappedMessage = {
       ...obj,
       type,
