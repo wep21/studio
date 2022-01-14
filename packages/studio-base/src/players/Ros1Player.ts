@@ -84,7 +84,7 @@ export default class Ros1Player implements Player {
   private _emitTimer?: ReturnType<typeof setTimeout>;
 
   constructor({ url, hostname, metricsCollector }: Ros1PlayerOpts) {
-    log.info(`initializing Ros1Player (url=${url})`);
+    log.info(`initializing Ros1Player (url=${url}, hostname=${hostname})`);
     this._metricsCollector = metricsCollector;
     this._url = url;
     this._hostname = hostname;
@@ -114,7 +114,7 @@ export default class Ros1Player implements Player {
 
     if (this._rosNode == undefined) {
       const rosNode = new RosNode({
-        name: "/foxglovestudio",
+        name: `/foxglovestudio_${os.pid}`,
         hostname,
         pid: os.pid,
         rosMasterUri: this._url,

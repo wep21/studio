@@ -14,8 +14,9 @@ export type PanelInfo = {
   title: string;
   type: string;
   description?: string;
-
+  thumbnail?: string;
   help?: React.ReactNode;
+
   /**
    * The panel module is a function to load the panel.
    * This is to support our lazy built-in panels
@@ -43,6 +44,7 @@ export interface PanelCatalog {
 }
 
 const PanelCatalogContext = createContext<PanelCatalog | undefined>(undefined);
+PanelCatalogContext.displayName = "PanelCatalogContext";
 
 export function usePanelCatalog(): PanelCatalog {
   const panelCatalog = useContext(PanelCatalogContext);

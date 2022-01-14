@@ -68,8 +68,8 @@ import {
   getUpdatedGlobalVariablesBySelectedObject,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/threeDimensionalVizUtils";
 import {
-  CoordinateFrame,
-  TransformTree,
+  IImmutableCoordinateFrame,
+  IImmutableTransformTree,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
 import {
   FollowMode,
@@ -96,12 +96,12 @@ export type LayoutToolbarSharedProps = {
   onCameraStateChange: (arg0: CameraState) => void;
   onFollowChange: (followTf?: string, followMode?: FollowMode) => void;
   saveConfig: Save3DConfig;
-  transforms: TransformTree;
+  transforms: IImmutableTransformTree;
   isPlaying?: boolean;
 };
 
 export type LayoutTopicSettingsSharedProps = {
-  transforms: TransformTree;
+  transforms: IImmutableTransformTree;
   topics: readonly Topic[];
   saveConfig: Save3DConfig;
 };
@@ -109,14 +109,15 @@ export type LayoutTopicSettingsSharedProps = {
 type Props = LayoutToolbarSharedProps &
   LayoutTopicSettingsSharedProps & {
     children?: React.ReactNode;
-    renderFrame: CoordinateFrame;
-    fixedFrame: CoordinateFrame;
+    renderFrame: IImmutableCoordinateFrame;
+    fixedFrame: IImmutableCoordinateFrame;
     currentTime: Time;
     resetFrame: boolean;
     frame: Frame;
     helpContent: React.ReactNode | string;
     isPlaying?: boolean;
     config: ThreeDimensionalVizConfig;
+    urdfBuilder: UrdfBuilder;
     saveConfig: Save3DConfig;
     setSubscriptions: (subscriptions: string[]) => void;
     topics: readonly Topic[];
@@ -218,6 +219,7 @@ export default function Layout({
   topics,
   transforms,
   setSubscriptions,
+  urdfBuilder,
   config: {
     autoTextBackgroundColor = false,
     checkedKeys,
@@ -274,13 +276,11 @@ export default function Layout({
 
   const isDrawing = useMemo(() => measureInfo.measureState !== "idle", [measureInfo.measureState]);
 
-  // initialize the GridBuilder, SceneBuilder, and TransformsBuilder
-  const { gridBuilder, sceneBuilder, transformsBuilder, urdfBuilder } = useMemo(
+  const { gridBuilder, sceneBuilder, transformsBuilder } = useMemo(
     () => ({
       gridBuilder: new GridBuilder(),
       sceneBuilder: new SceneBuilder(),
       transformsBuilder: new TransformsBuilder(),
-      urdfBuilder: new UrdfBuilder(),
     }),
     [],
   );
@@ -602,22 +602,15 @@ export default function Layout({
     toggleDebug,
   } = useMemo(() => {
     return {
-      onClick: (ev: React.MouseEvent, args?: ReglClickInfo) => {
+      onClick: (_ev: React.MouseEvent, args?: ReglClickInfo) => {
         // Don't set any clicked objects when measuring distance or drawing polygons.
         if (callbackInputsRef.current.isDrawing) {
           return;
         }
         const newClickedObjects =
           (args?.objects as MouseEventObject[] | undefined) ?? ([] as MouseEventObject[]);
-        const newClickedPosition = { clientX: ev.clientX, clientY: ev.clientY };
         const newSelectedObject = newClickedObjects.length === 1 ? newClickedObjects[0] : undefined;
 
-        // Select the object directly if there is only one or open up context menu if there are many.
-        setSelectionState({
-          ...callbackInputsRef.current.selectionState,
-          clickedObjects: newClickedObjects,
-          clickedPosition: newClickedPosition,
-        });
         selectObject(newSelectedObject);
       },
       onControlsOverlayClick: (ev: React.MouseEvent<HTMLDivElement>) => {

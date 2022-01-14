@@ -14,7 +14,7 @@ import _, { flatten, groupBy, isEqual, keyBy, mapValues, some, xor } from "lodas
 import shallowequal from "shallowequal";
 
 import Log from "@foxglove/log";
-import { Time, fromSec } from "@foxglove/rostime";
+import { Time, add as addTime, fromSec, isGreaterThan, isLessThan, toSec } from "@foxglove/rostime";
 import {
   InteractionData,
   Interactive,
@@ -23,8 +23,8 @@ import MessageCollector from "@foxglove/studio-base/panels/ThreeDimensionalViz/S
 import { MarkerMatcher } from "@foxglove/studio-base/panels/ThreeDimensionalViz/ThreeDimensionalVizContext";
 import VelodyneCloudConverter from "@foxglove/studio-base/panels/ThreeDimensionalViz/VelodyneCloudConverter";
 import {
-  CoordinateFrame,
-  TransformTree,
+  IImmutableCoordinateFrame,
+  IImmutableTransformTree,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
 import {
   MarkerProvider,
@@ -97,7 +97,7 @@ type MarkerMatchersByTopic = {
 const missingTransformMessage = (
   renderFrameId: string,
   error: ErrorDetails,
-  transforms: TransformTree,
+  transforms: IImmutableTransformTree,
 ): string => {
   if (error.frameIds.size === 0) {
     throw new Error(`Missing transform error has no frameIds`);
@@ -113,7 +113,7 @@ const missingTransformMessage = (
 
 export function getSceneErrorsByTopic(
   sceneErrors: SceneErrors,
-  transforms: TransformTree,
+  transforms: IImmutableTransformTree,
 ): {
   [topicName: string]: string[];
 } {
@@ -176,11 +176,17 @@ export function filterOutSupersededMessages<T extends Pick<MessageEvent<unknown>
 
 function computeMarkerPose(
   marker: Marker,
-  transforms: TransformTree,
-  renderFrame: CoordinateFrame,
-  fixedFrame: CoordinateFrame,
+  transforms: IImmutableTransformTree,
+  renderFrame: IImmutableCoordinateFrame,
+  fixedFrame: IImmutableCoordinateFrame,
   currentTime: Time,
 ): Pose | undefined {
+  // Default markers with no frame_id to the empty frame
+  // (empty) frame id is our internal identifier for empty string frame_ids or undefined frame_ids
+  if (renderFrame.id === "(empty)" && !marker.header.frame_id) {
+    return marker.pose;
+  }
+
   const srcFrame = transforms.frame(marker.header.frame_id);
   if (!srcFrame) {
     return undefined;
@@ -222,7 +228,7 @@ export default class SceneBuilder implements MarkerProvider {
   collectors: {
     [key: string]: MessageCollector;
   } = {};
-  private _transforms?: TransformTree;
+  private _transforms?: IImmutableTransformTree;
   private _missingTfFrameIds = new Set<string>();
   private _clock?: Time;
   private _playerId?: string;
@@ -568,6 +574,13 @@ export default class SceneBuilder implements MarkerProvider {
     const name = `${topic}/${type}`;
 
     const { header, info, data } = message;
+    if (info.width * info.height !== data.length) {
+      this._setTopicError(
+        topic,
+        `OccupancyGrid data length (${data.length}) does not match width*height (${info.width}x${info.height}).`,
+      );
+      return;
+    }
     const mappedMessage = {
       header: {
         frame_id: header.frame_id,
@@ -647,11 +660,8 @@ export default class SceneBuilder implements MarkerProvider {
     const decayTimeInSec = this._settingsByKey[`t:${topic}`]?.decayTime as number | undefined;
     const lifetime =
       decayTimeInSec != undefined && decayTimeInSec !== 0 ? fromSec(decayTimeInSec) : undefined;
-    (this.collectors[topic] as MessageCollector).addNonMarker(
-      topic,
-      mappedMessage as Interactive<unknown>,
-      lifetime,
-    );
+
+    this.collectors[topic]?.addNonMarker(topic, mappedMessage as Interactive<unknown>, lifetime);
   };
 
   setCurrentTime = (currentTime: { sec: number; nsec: number }): void => {
@@ -664,7 +674,7 @@ export default class SceneBuilder implements MarkerProvider {
     }
   };
 
-  // extracts renderable markers from the ros frame
+  // extracts renderable markers from the frame
   render(): void {
     for (const topic of this.topicsToRender) {
       try {
@@ -841,6 +851,19 @@ export default class SceneBuilder implements MarkerProvider {
           }
         }
 
+        // If this marker's header.stamp is in the future, don't render it
+        if (isGreaterThan(marker.header.stamp, time)) {
+          continue;
+        }
+        // If this marker has an expired lifetime, don't render it
+        if (
+          marker.lifetime &&
+          toSec(marker.lifetime) > 0 &&
+          isLessThan(addTime(marker.header.stamp, marker.lifetime), time)
+        ) {
+          continue;
+        }
+
         const pose = computeMarkerPose(marker, transforms, renderFrame, fixedFrame, time);
         if (!pose) {
           this._missingTfFrameIds.add(marker.header.frame_id);
@@ -859,13 +882,10 @@ export default class SceneBuilder implements MarkerProvider {
         );
         marker.interactionData.highlighted = markerMatches;
 
-        // TODO(bmc): once we support more topic settings
-        // flesh this out to be more marker type agnostic
         const settings = this._settingsByKey[`t:${topic.name}`];
         if (settings) {
           (marker as { settings?: unknown }).settings = settings;
         }
-
         this._addMarkerToCollector(add, topic, marker, pose);
       }
 
