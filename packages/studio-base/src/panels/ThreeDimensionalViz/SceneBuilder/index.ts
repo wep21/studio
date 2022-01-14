@@ -15,6 +15,7 @@ import shallowequal from "shallowequal";
 
 import Log from "@foxglove/log";
 import { Time, add as addTime, fromSec, isGreaterThan, isLessThan, toSec } from "@foxglove/rostime";
+import PinholeCameraModel from "@foxglove/studio-base/panels/ImageView/PinholeCameraModel";
 import {
   InteractionData,
   Interactive,
@@ -52,6 +53,9 @@ import {
   LaserScan,
   OccupancyGridMessage,
   PointCloud2,
+  CameraInfo,
+  LineListMarker,
+  MutablePoint,
 } from "@foxglove/studio-base/types/Messages";
 import { clonePose, emptyPose } from "@foxglove/studio-base/util/Pose";
 import naturalSort from "@foxglove/studio-base/util/naturalSort";
@@ -195,6 +199,10 @@ function computeMarkerPose(
     dstTime = currentTime;
   }
   return renderFrame.apply(emptyPose(), marker.pose, fixedFrame, srcFrame, dstTime, srcTime);
+}
+
+function zeroPoint(): MutablePoint {
+  return { x: 0, y: 0, z: 0 };
 }
 
 export default class SceneBuilder implements MarkerProvider {
@@ -615,6 +623,85 @@ export default class SceneBuilder implements MarkerProvider {
     this._consumeNonMarkerMessage(msg.topic, newMessage, 110);
   };
 
+  private _consumeCameraInfo = (msg: MessageEvent<CameraInfo>): void => {
+    const info = msg.message;
+    const model = new PinholeCameraModel(info);
+    const origin = zeroPoint();
+    const tl = model.projectPixelTo3dRay(
+      zeroPoint(),
+      model.rectifyPoint(zeroPoint(), { x: 0, y: 0 }),
+    );
+    const tr = model.projectPixelTo3dRay(
+      zeroPoint(),
+      model.rectifyPoint(zeroPoint(), { x: info.width, y: 0 }),
+    );
+    const bl = model.projectPixelTo3dRay(
+      zeroPoint(),
+      model.rectifyPoint(zeroPoint(), { x: 0, y: info.height }),
+    );
+    const br = model.projectPixelTo3dRay(
+      zeroPoint(),
+      model.rectifyPoint(zeroPoint(), { x: info.width, y: info.height }),
+    );
+
+    const points = [origin, tl, origin, tr, origin, br, origin, bl];
+    points.push(tl);
+    for (let i = 1; i < 10; i++) {
+      const x = (i / 10) * info.width;
+      const p = model.projectPixelTo3dRay(
+        zeroPoint(),
+        model.rectifyPoint(zeroPoint(), { x, y: 0 }),
+      );
+      points.push(p, p);
+    }
+    points.push(tr);
+    points.push(bl);
+    for (let i = 1; i < 10; i++) {
+      const x = (i / 10) * info.width;
+      const p = model.projectPixelTo3dRay(
+        zeroPoint(),
+        model.rectifyPoint(zeroPoint(), { x, y: info.height }),
+      );
+      points.push(p, p);
+    }
+    points.push(br);
+    points.push(tl);
+    for (let i = 1; i < 10; i++) {
+      const y = (i / 10) * info.height;
+      const p = model.projectPixelTo3dRay(
+        zeroPoint(),
+        model.rectifyPoint(zeroPoint(), { x: 0, y }),
+      );
+      points.push(p, p);
+    }
+    points.push(bl);
+    points.push(tr);
+    for (let i = 1; i < 10; i++) {
+      const y = (i / 10) * info.height;
+      const p = model.projectPixelTo3dRay(
+        zeroPoint(),
+        model.rectifyPoint(zeroPoint(), { x: info.width, y }),
+      );
+      points.push(p, p);
+    }
+    points.push(br);
+
+    const drawData: LineListMarker = {
+      type: 5,
+      header: info.header,
+      ns: "",
+      id: 0,
+      action: 0,
+      pose: emptyPose(),
+      points,
+      color: { r: 0, g: 1, b: 0, a: 1 },
+      // colors: [],
+      scale: { x: 0.01, y: 0.01, z: 0.01 },
+      frame_locked: true,
+    };
+    this._consumeNonMarkerMessage(msg.topic, drawData, 5, info);
+  };
+
   private _consumeNonMarkerMessage = (
     topic: string,
     drawData: StampedMessage,
@@ -626,7 +713,7 @@ export default class SceneBuilder implements MarkerProvider {
       ...obj,
       type,
       pose: emptyPose(),
-      frame_locked: false,
+      frame_locked: obj.frame_locked ?? false,
       interactionData: { topic, originalMessage: originalMessage ?? drawData },
     };
 
@@ -746,6 +833,19 @@ export default class SceneBuilder implements MarkerProvider {
         }
         break;
       }
+      case "sensor_msgs/CameraInfo":
+      case "sensor_msgs/msg/CameraInfo":
+      case "ros.sensor_msgs.CameraInfo":
+        this._consumeCameraInfo(msg as MessageEvent<CameraInfo>);
+        break;
+      case "sensor_msgs/CompressedImage":
+      case "sensor_msgs/msg/CompressedImage":
+      case "ros.sensor_msgs.CompressedImage":
+        break;
+      case "sensor_msgs/Image":
+      case "sensor_msgs/msg/Image":
+      case "ros.sensor_msgs.Image":
+        break;
       case "sensor_msgs/LaserScan":
       case "sensor_msgs/msg/LaserScan":
       case "ros.sensor_msgs.LaserScan":

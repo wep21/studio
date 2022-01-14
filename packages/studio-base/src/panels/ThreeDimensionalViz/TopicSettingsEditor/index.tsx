@@ -18,6 +18,8 @@ import UrdfSettingsEditor from "@foxglove/studio-base/panels/ThreeDimensionalViz
 import { TopicSettingsEditorProps } from "@foxglove/studio-base/panels/ThreeDimensionalViz/TopicSettingsEditor/types";
 import { FOXGLOVE_GRID_DATATYPE, URDF_DATATYPE } from "@foxglove/studio-base/util/globalConstants";
 
+import CameraInfoEditor from "./CameraInfoEditor";
+import ImageEditor from "./ImageEditor";
 import LaserScanSettingsEditor from "./LaserScanSettingsEditor";
 import MarkerSettingsEditor from "./MarkerSettingsEditor";
 import PointCloudSettingsEditor from "./PointCloudSettingsEditor";
@@ -33,24 +35,43 @@ export function topicSettingsEditorForDatatype(datatype: string):
   const editors = new Map<string, unknown>([
     [FOXGLOVE_GRID_DATATYPE, GridSettingsEditor],
     [URDF_DATATYPE, UrdfSettingsEditor],
+
     ["sensor_msgs/PointCloud2", PointCloudSettingsEditor],
     ["sensor_msgs/msg/PointCloud2", PointCloudSettingsEditor],
     ["ros.sensor_msgs.PointCloud2", PointCloudSettingsEditor],
+
     ["velodyne_msgs/VelodyneScan", PointCloudSettingsEditor],
     ["velodyne_msgs/msg/VelodyneScan", PointCloudSettingsEditor],
     ["ros.velodyne_msgs.VelodyneScan", PointCloudSettingsEditor],
+
     ["geometry_msgs/PoseStamped", PoseSettingsEditor],
     ["geometry_msgs/msg/PoseStamped", PoseSettingsEditor],
     ["ros.geometry_msgs.PoseStamped", PoseSettingsEditor],
+
+    ["sensor_msgs/CameraInfo", CameraInfoEditor],
+    ["sensor_msgs/msg/CameraInfo", CameraInfoEditor],
+    ["ros.sensor_msgs.CameraInfo", CameraInfoEditor],
+
+    ["sensor_msgs/CompressedImage", ImageEditor],
+    ["sensor_msgs/msg/CompressedImage", ImageEditor],
+    ["ros.sensor_msgs.CompressedImage", ImageEditor],
+
+    ["sensor_msgs/Image", ImageEditor],
+    ["sensor_msgs/msg/Image", ImageEditor],
+    ["ros.sensor_msgs.Image", ImageEditor],
+
     ["sensor_msgs/LaserScan", LaserScanSettingsEditor],
     ["sensor_msgs/msg/LaserScan", LaserScanSettingsEditor],
     ["ros.sensor_msgs.LaserScan", LaserScanSettingsEditor],
+
     ["visualization_msgs/Marker", MarkerSettingsEditor],
     ["visualization_msgs/msg/Marker", MarkerSettingsEditor],
     ["ros.visualization_msgs.Marker", MarkerSettingsEditor],
+
     ["visualization_msgs/MarkerArray", MarkerSettingsEditor],
     ["visualization_msgs/msg/MarkerArray", MarkerSettingsEditor],
     ["ros.visualization_msgs.MarkerArray", MarkerSettingsEditor],
+
     ["nav_msgs/Path", MarkerSettingsEditor],
     ["nav_msgs/msg/Path", MarkerSettingsEditor],
     ["ros.nav_msgs.Path", MarkerSettingsEditor],
