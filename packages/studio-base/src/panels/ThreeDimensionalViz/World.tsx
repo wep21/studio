@@ -30,6 +30,7 @@ import WorldMarkers, {
   InteractiveMarkersByType,
   MarkerWithInteractionData,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/WorldMarkers";
+import { LoadModelOptions } from "@foxglove/studio-base/panels/ThreeDimensionalViz/commands/MeshMarkers";
 import { LAYER_INDEX_DEFAULT_BASE } from "@foxglove/studio-base/panels/ThreeDimensionalViz/constants";
 import {
   IImmutableCoordinateFrame,
@@ -50,6 +51,7 @@ import {
   SphereMarker,
   TextMarker,
 } from "@foxglove/studio-base/types/Messages";
+import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 
 import { MarkerCollector, MarkerProvider } from "./types";
 import withHighlights from "./withHighlights";
@@ -71,6 +73,7 @@ type Props = WorldSearchTextProps & {
   onMouseDown?: MouseHandler;
   onMouseMove?: MouseHandler;
   onMouseUp?: MouseHandler;
+  loadModelOptions: LoadModelOptions;
 };
 
 function getMarkers({
@@ -145,6 +148,7 @@ function World(
     searchTextOpen,
     selectedMatchIndex,
     searchTextMatches,
+    loadModelOptions,
   }: Props,
   ref: typeof Worldview,
 ) {
@@ -231,7 +235,9 @@ function World(
           markersByType: processedMarkersByType,
           layerIndex: LAYER_INDEX_DEFAULT_BASE,
           clearCachedMarkers: false,
-          cameraDistance: cameraState.distance ?? DEFAULT_CAMERA_STATE.distance,
+          cameraDistance:
+            mightActuallyBePartial(cameraState).distance ?? DEFAULT_CAMERA_STATE.distance,
+          loadModelOptions,
         }}
       />
     </Worldview>

@@ -84,7 +84,7 @@ export default class Ros1Player implements Player {
   private _emitTimer?: ReturnType<typeof setTimeout>;
 
   constructor({ url, hostname, metricsCollector }: Ros1PlayerOpts) {
-    log.info(`initializing Ros1Player (url=${url})`);
+    log.info(`initializing Ros1Player (url=${url}, hostname=${hostname})`);
     this._metricsCollector = metricsCollector;
     this._url = url;
     this._hostname = hostname;
@@ -464,10 +464,11 @@ export default class Ros1Player implements Player {
         }
         msgdef = rosDatatypesToMessageDefinition(datatypes, dataType);
       } catch (error) {
+        log.debug(error);
         this._addProblem(msgdefProblemId, {
           severity: "warn",
           message: `Unknown message definition for "${topic}"`,
-          tip: `Try subscribing to the topic "${topic} before publishing to it`,
+          tip: `Try subscribing to the topic "${topic}" before publishing to it`,
         });
         continue;
       }
@@ -553,7 +554,7 @@ export default class Ros1Player implements Player {
 
   private _handleInternalMessage(msg: MessageEvent<unknown>): void {
     const maybeClockMsg = msg.message as { clock?: Time };
-    if (msg.topic === "/clock" && maybeClockMsg.clock && !isNaN(maybeClockMsg.clock?.sec)) {
+    if (msg.topic === "/clock" && maybeClockMsg.clock && !isNaN(maybeClockMsg.clock.sec)) {
       const time = maybeClockMsg.clock;
       const seconds = toSec(maybeClockMsg.clock);
       if (isNaN(seconds)) {

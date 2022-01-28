@@ -19,6 +19,7 @@ import { RpcElement, RpcScales } from "@foxglove/studio-base/components/Chart/ty
 import ChartJsMux from "@foxglove/studio-base/components/Chart/worker/ChartJsMux";
 import Rpc, { createLinkedChannels } from "@foxglove/studio-base/util/Rpc";
 import WebWorkerManager from "@foxglove/studio-base/util/WebWorkerManager";
+import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 
 const log = Logger.getLogger(__filename);
 
@@ -50,15 +51,18 @@ type Props = {
   // called when the chart scales have updated (happens for zoom/pan/reset)
   onScalesUpdate?: (scales: RpcScales, opt: { userInteraction: boolean }) => void;
 
+  // called when the chart is about to start rendering new data
+  onStartRender?: () => void;
+
   // called when the chart has finished updating with new data
-  onChartUpdate?: () => void;
+  onFinishRender?: () => void;
 
   // called when a user hovers over an element
   // uses the chart.options.hover configuration
   onHover?: (elements: RpcElement[]) => void;
 };
 
-const devicePixelRatio = window.devicePixelRatio ?? 1;
+const devicePixelRatio = mightActuallyBePartial(window).devicePixelRatio ?? 1;
 
 const webWorkerManager = new WebWorkerManager(makeChartJSWorker, 4);
 
@@ -101,7 +105,7 @@ function Chart(props: Props): JSX.Element {
   const zoomEnabled = props.options.plugins?.zoom?.zoom?.enabled ?? false;
   const panEnabled = props.options.plugins?.zoom?.pan?.enabled ?? false;
 
-  const { type, data, options, width, height, onChartUpdate } = props;
+  const { type, data, options, width, height, onStartRender, onFinishRender } = props;
 
   const sendWrapperRef = useRef<RpcSend | undefined>();
   const rpcSendRef = useRef<RpcSend | undefined>();
@@ -232,6 +236,7 @@ function Chart(props: Props): JSX.Element {
 
       initialized.current = true;
 
+      onStartRender?.();
       const offscreenCanvas =
         "transferControlToOffscreen" in canvas ? canvas.transferControlToOffscreen() : canvas;
       const scales = await sendWrapperRef.current<RpcScales>(
@@ -239,24 +244,20 @@ function Chart(props: Props): JSX.Element {
         {
           node: offscreenCanvas,
           type,
-          data: newUpdateMessage?.data,
-          options: newUpdateMessage?.options,
+          data: newUpdateMessage.data,
+          options: newUpdateMessage.options,
           devicePixelRatio,
-          width: newUpdateMessage?.width,
-          height: newUpdateMessage?.height,
+          width: newUpdateMessage.width,
+          height: newUpdateMessage.height,
         },
         [offscreenCanvas],
       );
-
-      if (!isMounted()) {
-        return;
-      }
 
       // once we are initialized, we can allow other handlers to send to the rpc endpoint
       rpcSendRef.current = sendWrapperRef.current;
 
       maybeUpdateScales(scales);
-      onChartUpdate?.();
+      onFinishRender?.();
       return;
     }
 
@@ -269,14 +270,11 @@ function Chart(props: Props): JSX.Element {
       return;
     }
 
+    onStartRender?.();
     const scales = await rpcSendRef.current<RpcScales>("update", newUpdateMessage);
-    if (!isMounted()) {
-      return;
-    }
-
     maybeUpdateScales(scales);
-    onChartUpdate?.();
-  }, [getNewUpdateMessage, isMounted, maybeUpdateScales, onChartUpdate, type]);
+    onFinishRender?.();
+  }, [getNewUpdateMessage, maybeUpdateScales, onFinishRender, onStartRender, type]);
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -419,7 +417,7 @@ function Chart(props: Props): JSX.Element {
           event: rpcMouseEvent(event),
         });
 
-        if (!isMounted() || !mousePresentRef.current) {
+        if (!isMounted()) {
           return;
         }
 
@@ -475,7 +473,7 @@ function Chart(props: Props): JSX.Element {
         yVal = (range / pixels) * (mouseY - yScale.pixelMin) + yScale.min;
       }
 
-      props.onClick?.({
+      props.onClick({
         datalabel,
         x: xVal,
         y: yVal,

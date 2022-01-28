@@ -3,12 +3,21 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { useTheme } from "@fluentui/react";
-import { CSSProperties, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { v4 as uuid } from "uuid";
 
 import Logger from "@foxglove/log";
 import { fromSec, toSec } from "@foxglove/rostime";
 import {
+  AppSettingValue,
   ExtensionPanelRegistration,
   MessageEvent,
   PanelExtensionContext,
@@ -22,6 +31,7 @@ import {
 } from "@foxglove/studio-base/components/MessagePipeline";
 import { usePanelContext } from "@foxglove/studio-base/components/PanelContext";
 import PanelToolbar from "@foxglove/studio-base/components/PanelToolbar";
+import { useAppConfiguration } from "@foxglove/studio-base/context/AppConfigurationContext";
 import {
   useClearHoverValue,
   useHoverValue,
@@ -92,6 +102,8 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
   const [error, setError] = useState<Error | undefined>();
   const watchedFieldsRef = useRef(new Set<keyof RenderState>());
   const subscribedTopicsRef = useRef(new Set<string>());
+  const currentAppSettingsRef = useRef(new Map<string, AppSettingValue>());
+  const [subscribedAppSettings, setSubscribedAppSettings] = useState<string[]>([]);
   const previousPlayerStateRef = useRef<PlayerState | undefined>(undefined);
 
   // To avoid updating extended message stores once message pipeline blocks are no longer updating
@@ -131,7 +143,13 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
 
   const colorScheme = useTheme().isInverted ? "dark" : "light";
 
-  const renderPanel = useCallback(() => {
+  const appConfiguration = useAppConfiguration();
+
+  // renderPanelImpl invokes the panel extension context's render function with updated
+  // render state fields.
+  //
+  // NOTE: Do not call renderPanelImpl directly, always call queueRender()
+  const renderPanelImpl = useCallback(() => {
     if (!renderFn) {
       return;
     }
@@ -234,6 +252,13 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
       }
     }
 
+    if (watchedFieldsRef.current.has("appSettings")) {
+      if (renderState.appSettings !== currentAppSettingsRef.current) {
+        shouldRender = true;
+        renderState.appSettings = currentAppSettingsRef.current;
+      }
+    }
+
     if (!shouldRender) {
       return;
     }
@@ -256,17 +281,53 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
     }
   }, [colorScheme, renderFn]);
 
+  const queueRender = useCallback(() => {
+    if (!renderFn || rafRequestedRef.current != undefined) {
+      return;
+    }
+    rafRequestedRef.current = requestAnimationFrame(renderPanelImpl);
+  }, [renderFn, renderPanelImpl]);
+
+  // Queue render when message pipeline has new data
   const messagePipelineSelector = useCallback(
     (ctx: MessagePipelineContext) => {
       latestPipelineContextRef.current = ctx;
-
-      if (!renderFn || rafRequestedRef.current != undefined) {
-        return;
-      }
-      rafRequestedRef.current = requestAnimationFrame(renderPanel);
+      queueRender();
     },
-    [renderFn, renderPanel],
+    [queueRender],
   );
+
+  useEffect(() => {
+    const handlers = new Map<string, (newValue: AppSettingValue) => void>();
+    for (const key of subscribedAppSettings) {
+      currentAppSettingsRef.current.set(key, appConfiguration.get(key));
+
+      const handler = (newValue: AppSettingValue) => {
+        currentAppSettingsRef.current = new Map(currentAppSettingsRef.current);
+        currentAppSettingsRef.current.set(key, newValue);
+        queueRender();
+      };
+      handlers.set(key, handler);
+      appConfiguration.addChangeListener(key, handler);
+    }
+
+    currentAppSettingsRef.current = new Map(currentAppSettingsRef.current);
+    queueRender();
+
+    return () => {
+      for (const [key, handler] of handlers.entries()) {
+        appConfiguration.removeChangeListener(key, handler);
+      }
+    };
+  }, [appConfiguration, queueRender, subscribedAppSettings]);
+
+  // Queue render on hover value changes which occur outside the message pipeline
+  useLayoutEffect(() => {
+    // No need to queue render if not interested in preview time
+    if (watchedFieldsRef.current.has("previewTime")) {
+      queueRender();
+    }
+  }, [hoverValue, queueRender]);
 
   useMessagePipeline(messagePipelineSelector);
 
@@ -274,6 +335,7 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
   const partialExtensionContext = useMemo<PartialPanelExtensionContext>(() => {
     const layout: PanelExtensionContext["layout"] = {
       addPanel({ position, type, updateIfExists, getState }) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (position === "sibling") {
           openSiblingPanel({
             panelType: type,
@@ -325,9 +387,7 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
       },
 
       subscribe: (topics: string[]) => {
-        if (topics.length === 0) {
-          return;
-        }
+        subscribedTopicsRef.current.clear();
 
         // If the player has loaded all the blocks, the blocks reference won't change so our message
         // pipeline handler for allFrames won't create a new set of all frames for the newly
@@ -341,7 +401,9 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
           subscribedTopicsRef.current.add(topic);
         }
 
-        requestBackfill();
+        if (topics.length > 0) {
+          requestBackfill();
+        }
       },
 
       advertise: capabilities.includes(PlayerCapabilities.advertise)
@@ -390,6 +452,10 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
       unsubscribeAll: () => {
         subscribedTopicsRef.current.clear();
         setSubscriptions(panelId, []);
+      },
+
+      subscribeAppSettings: (settings: string[]) => {
+        setSubscribedAppSettings(settings);
       },
     };
   }, [

@@ -58,6 +58,7 @@ import {
   MutablePoint,
 } from "@foxglove/studio-base/types/Messages";
 import { clonePose, emptyPose } from "@foxglove/studio-base/util/Pose";
+import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 import naturalSort from "@foxglove/studio-base/util/naturalSort";
 
 const log = Log.getLogger(__filename);
@@ -185,6 +186,12 @@ function computeMarkerPose(
   fixedFrame: IImmutableCoordinateFrame,
   currentTime: Time,
 ): Pose | undefined {
+  // Default markers with no frame_id to the empty frame
+  // (empty) frame id is our internal identifier for empty string frame_ids or undefined frame_ids
+  if (renderFrame.id === "(empty)" && !marker.header.frame_id) {
+    return marker.pose;
+  }
+
   const srcFrame = transforms.frame(marker.header.frame_id);
   if (!srcFrame) {
     return undefined;
@@ -612,7 +619,7 @@ export default class SceneBuilder implements MarkerProvider {
   };
 
   private _consumeColor = (msg: MessageEvent<Color>): void => {
-    const color = msg.message;
+    const color = mightActuallyBePartial(msg.message);
     if (color.r == undefined || color.g == undefined || color.b == undefined) {
       return;
     }
@@ -737,11 +744,8 @@ export default class SceneBuilder implements MarkerProvider {
     const decayTimeInSec = this._settingsByKey[`t:${topic}`]?.decayTime as number | undefined;
     const lifetime =
       decayTimeInSec != undefined && decayTimeInSec !== 0 ? fromSec(decayTimeInSec) : undefined;
-    (this.collectors[topic] as MessageCollector).addNonMarker(
-      topic,
-      mappedMessage as Interactive<unknown>,
-      lifetime,
-    );
+
+    this.collectors[topic]?.addNonMarker(topic, mappedMessage as Interactive<unknown>, lifetime);
   };
 
   setCurrentTime = (currentTime: { sec: number; nsec: number }): void => {
@@ -754,7 +758,7 @@ export default class SceneBuilder implements MarkerProvider {
     }
   };
 
-  // extracts renderable markers from the ros frame
+  // extracts renderable markers from the frame
   render(): void {
     for (const topic of this.topicsToRender) {
       try {
@@ -938,7 +942,7 @@ export default class SceneBuilder implements MarkerProvider {
       const topicMarkers = collector.getMessages();
       for (const message of topicMarkers) {
         const marker = message as unknown as Interactive<BaseMarker & Marker>;
-        if (marker.ns != undefined && marker.ns !== "") {
+        if (marker.ns !== "") {
           if (!this.namespaceIsEnabled(topic.name, marker.ns)) {
             continue;
           }
@@ -975,13 +979,10 @@ export default class SceneBuilder implements MarkerProvider {
         );
         marker.interactionData.highlighted = markerMatches;
 
-        // TODO(bmc): once we support more topic settings
-        // flesh this out to be more marker type agnostic
         const settings = this._settingsByKey[`t:${topic.name}`];
         if (settings) {
           (marker as { settings?: unknown }).settings = settings;
         }
-
         this._addMarkerToCollector(add, topic, marker, pose);
       }
 

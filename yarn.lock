@@ -1563,7 +1563,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/runtime@npm:^7.0.0, @babel/runtime@npm:^7.1.2, @babel/runtime@npm:^7.10.1, @babel/runtime@npm:^7.10.2, @babel/runtime@npm:^7.11.1, @babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.13.10, @babel/runtime@npm:^7.14.0, @babel/runtime@npm:^7.14.8, @babel/runtime@npm:^7.16.3, @babel/runtime@npm:^7.16.5, @babel/runtime@npm:^7.3.1, @babel/runtime@npm:^7.3.4, @babel/runtime@npm:^7.5.0, @babel/runtime@npm:^7.5.5, @babel/runtime@npm:^7.7.2, @babel/runtime@npm:^7.7.6, @babel/runtime@npm:^7.8.3, @babel/runtime@npm:^7.8.4, @babel/runtime@npm:^7.8.7, @babel/runtime@npm:^7.9.2":
+"@babel/runtime@npm:^7.0.0, @babel/runtime@npm:^7.1.2, @babel/runtime@npm:^7.10.1, @babel/runtime@npm:^7.10.2, @babel/runtime@npm:^7.11.1, @babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.13.10, @babel/runtime@npm:^7.14.0, @babel/runtime@npm:^7.14.8, @babel/runtime@npm:^7.16.3, @babel/runtime@npm:^7.16.5, @babel/runtime@npm:^7.16.7, @babel/runtime@npm:^7.3.1, @babel/runtime@npm:^7.3.4, @babel/runtime@npm:^7.5.0, @babel/runtime@npm:^7.5.5, @babel/runtime@npm:^7.7.2, @babel/runtime@npm:^7.7.6, @babel/runtime@npm:^7.8.3, @babel/runtime@npm:^7.8.4, @babel/runtime@npm:^7.8.7, @babel/runtime@npm:^7.9.2":
   version: 7.16.7
   resolution: "@babel/runtime@npm:7.16.7"
   dependencies:
@@ -2304,13 +2304,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@foxglove/mcap@github:foxglove/mcap#workspace=@foxglove/mcap&commit=3ab57caf1139c9ad4bcd756988d874caabd12f1f":
+"@foxglove/mcap@github:foxglove/mcap#workspace=@foxglove/mcap&commit=e9250ff2130a5f28a59cdd625dd1a7f9388a4302":
   version: 0.1.0
-  resolution: "@foxglove/mcap@https://github.com/foxglove/mcap.git#workspace=%40foxglove%2Fmcap&commit=3ab57caf1139c9ad4bcd756988d874caabd12f1f"
+  resolution: "@foxglove/mcap@https://github.com/foxglove/mcap.git#workspace=%40foxglove%2Fmcap&commit=e9250ff2130a5f28a59cdd625dd1a7f9388a4302"
   dependencies:
     "@foxglove/crc": ^0.0.3
+    heap-js: ^2.1.6
     tslib: ^2
-  checksum: 27324cfee48a3bbeacc752ab96538fcf267a657d26d2353cb900c7c95dfa8b9420a9615bd44dbc462c6aa99d7232492ed47ef43e728dc6997326f52429645447
+  checksum: 7d7c0edf708a7d6a8d517fc1fe9260e86ec812b88f669a1450008c86933d8f9a826c426b8a77ec3ccdab2ae14088a9fd11b9ea2be44f7b1410d41073a597ef05
   languageName: node
   linkType: hard
 
@@ -2324,9 +2325,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/regl-worldview@npm:2.0.1":
-  version: 2.0.1
-  resolution: "@foxglove/regl-worldview@npm:2.0.1"
+"@foxglove/regl-worldview@npm:2.4.0":
+  version: 2.4.0
+  resolution: "@foxglove/regl-worldview@npm:2.4.0"
   dependencies:
     "@babel/runtime": ^7.3.1
     "@mapbox/tiny-sdf": ^1.1.1
@@ -2344,7 +2345,7 @@ __metadata:
   peerDependencies:
     react: 16.x
     react-dom: 16.x
-  checksum: 91fa9c6dd9819cdeeac5b323d554c417994dc3a8b60b12de382b2929b1213370f6bda5da76d255e75a17ac382c0532e02d361455a0285796393b643aa0307f5b
+  checksum: c509b5307845d436c182a3a6eaf6253ba449af3bfe40b1acd4938ebfc12bfb53fc9a037dee51a6e6bfd9c4b1d582b11eba4b82401b0f756505034b50758f2c2c
   languageName: node
   linkType: hard
 
@@ -2360,15 +2361,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/ros2@npm:1.0.8":
-  version: 1.0.8
-  resolution: "@foxglove/ros2@npm:1.0.8"
+"@foxglove/ros2@npm:3.1.0":
+  version: 3.1.0
+  resolution: "@foxglove/ros2@npm:3.1.0"
   dependencies:
     "@foxglove/rosmsg": ^2.0.0 || ^3.0.0
     "@foxglove/rosmsg2-serialization": ^1.0.5
-    "@foxglove/rtps": ^1.2.5
+    "@foxglove/rtps": ^1.4.0
     eventemitter3: ^4.0.7
-  checksum: 846763e1e6608d1e7f4ee6752d26adafe463abdd43cbc457de8dc7587ea499b9007f57d4517399b0db0027661d590a33ed221198dc03de38026dc1ecb12615f5
+  checksum: 5e122c5109af168ed3ceeaa829e1bd2e646fcb5b24b3081ce0eb72c9e4cc9074c0ed81d012410b19cc22d77870d7ef18d8d4d49849f514720fddfdc1a40cedc7
   languageName: node
   linkType: hard
 
@@ -2461,15 +2462,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/rtps@npm:^1.2.5":
-  version: 1.2.5
-  resolution: "@foxglove/rtps@npm:1.2.5"
+"@foxglove/rtps@npm:^1.4.0":
+  version: 1.4.0
+  resolution: "@foxglove/rtps@npm:1.4.0"
   dependencies:
     "@foxglove/cdr": ^2.0.0
-    "@foxglove/rostime": ^1.1.0
-    avl: ^1.5.2
+    "@foxglove/rostime": ^1.1.1
+    avl: ^1.5.3
     eventemitter3: ^4.0.7
-  checksum: 3d10b2aafe17bfa20f3421119b068e11ce72cb2b4fbb4eda07c367b7fffa9ceeff21e870a4c83e8fa28f5dccac4e45f9941571c09461a970b99b33f667f3f3b5
+  checksum: 420ab1d4c4e3ab04881a4ee5e7e7198f4e531f24bddc79fa8c585251167321dba966c8d348b79b94497286d705102f0fa371f7c74ca9f3e6939cd60c8a09a15e
   languageName: node
   linkType: hard
 
@@ -2494,10 +2495,10 @@ __metadata:
     "@foxglove/den": "workspace:*"
     "@foxglove/electron-socket": 1.3.1
     "@foxglove/hooks": "workspace:*"
-    "@foxglove/mcap": "github:foxglove/mcap#workspace=@foxglove/mcap&commit=3ab57caf1139c9ad4bcd756988d874caabd12f1f"
-    "@foxglove/regl-worldview": 2.0.1
+    "@foxglove/mcap": "github:foxglove/mcap#workspace=@foxglove/mcap&commit=e9250ff2130a5f28a59cdd625dd1a7f9388a4302"
+    "@foxglove/regl-worldview": 2.4.0
     "@foxglove/ros1": 1.4.0
-    "@foxglove/ros2": 1.0.8
+    "@foxglove/ros2": 3.1.0
     "@foxglove/rosbag": 0.1.2
     "@foxglove/rosbag2-web": 4.0.3
     "@foxglove/rosmsg": 3.0.0
@@ -2507,10 +2508,11 @@ __metadata:
     "@foxglove/rosmsg2-serialization": 1.0.5
     "@foxglove/rostime": 1.1.1
     "@foxglove/studio": "workspace:*"
-    "@foxglove/ulog": 2.1.1
+    "@foxglove/ulog": 2.1.2
     "@foxglove/velodyne-cloud": 1.0.0
     "@foxglove/ws-protocol": 0.0.8
     "@mdi/svg": 6.5.95
+    "@mui/icons-material": 5.3.1
     "@mui/material": 5.2.7
     "@mui/styles": 5.2.3
     "@sentry/core": 6.16.1
@@ -2591,6 +2593,7 @@ __metadata:
     hammerjs: 2.0.8
     history: 5.2.0
     idb-keyval: 6.0.3
+    immer: 9.0.12
     intervals-fn: 3.0.3
     leaflet: 1.7.1
     lodash: 4.17.21
@@ -2599,8 +2602,8 @@ __metadata:
     moment: 2.29.1
     moment-duration-format: 2.3.2
     moment-timezone: 0.5.34
-    monaco-editor: 0.31.1
-    monaco-editor-webpack-plugin: 7.0.1
+    monaco-editor: 0.30.1
+    monaco-editor-webpack-plugin: 6.0.0
     natsort: 2.0.3
     nearley: 2.20.1
     nearley-loader: 2.0.0
@@ -2611,7 +2614,7 @@ __metadata:
     rc-tree: 5.3.7
     react: 17.0.2
     react-autocomplete: "janpaul123/react-autocomplete#bc8737070b5744069719c8fcd4e0a197192b0d48"
-    react-dom: 17.0.2
+    react-dom: "patch:react-dom@npm:17.0.2#../../patches/react-dom.patch"
     react-highlight-words: 0.17.0
     react-hover-observer: 2.1.1
     react-input-autosize: 3.0.0
@@ -2642,6 +2645,7 @@ __metadata:
     text-metrics: 2.0.9
     three: 0.136.0
     tinycolor2: 1.4.2
+    ts-essentials: 9.1.2
     ts-loader: 9.2.6
     tsconfig-paths: 3.12.0
     ttypescript: 1.5.13
@@ -2651,6 +2655,7 @@ __metadata:
     urdf-loader: 0.10.2
     url-search-params: 1.1.0
     use-debounce: 7.0.1
+    use-immer: 0.6.0
     use-pan-and-zoom: 0.6.2
     uuid: 8.3.2
     wasm-lz4: 2.0.0
@@ -2672,10 +2677,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@foxglove/ulog@npm:2.1.1":
-  version: 2.1.1
-  resolution: "@foxglove/ulog@npm:2.1.1"
-  checksum: 6bd6b28dbc0acffe11958916d859391a2406ab1e38c9d0b1bdc61f47aed6bcc41f3a1b68b8a85da098a4094bb98d835a23921ff21cfeebf2124e2b2d8dfafb30
+"@foxglove/ulog@npm:2.1.2":
+  version: 2.1.2
+  resolution: "@foxglove/ulog@npm:2.1.2"
+  checksum: 5014a871a13e3acaeba7fc8d7db16937f1936e6bef827f10800b254a9bedd56faa939347479ee88412967789d8680e74f375cc82acb21aae39bbbfa3f21a2444
   languageName: node
   linkType: hard
 
@@ -3146,6 +3151,22 @@ __metadata:
     "@types/react":
       optional: true
   checksum: 641c6d3ddcfc1962d4ebe21587761f728c6eb3d5b0d4063c70321c8c99cc2392c4350cc03e310fb997c98e412616f63028a85f133e9f44e6b1b60917955c95ac
+  languageName: node
+  linkType: hard
+
+"@mui/icons-material@npm:5.3.1":
+  version: 5.3.1
+  resolution: "@mui/icons-material@npm:5.3.1"
+  dependencies:
+    "@babel/runtime": ^7.16.7
+  peerDependencies:
+    "@mui/material": ^5.0.0
+    "@types/react": ^16.8.6 || ^17.0.0
+    react: ^17.0.0
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: b9073a0432734466fa61c0493505e36e8eb663cd58f006590bc8be932c218ff58d666cef20b50d9265afa8ab3579bd35c6a5ca1a158d07d55dc9680d544159cb
   languageName: node
   linkType: hard
 
@@ -7782,7 +7803,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"avl@npm:^1.5.2":
+"avl@npm:^1.5.3":
   version: 1.5.3
   resolution: "avl@npm:1.5.3"
   checksum: 19ab9bff1eec3de86188313342fc8843e695db174aa355217ca2c0e2ec925a415f2c65d83c6772238c8d646cf6310cae5d92cc0ef5d76fc0348eef9c1eac06aa
@@ -13918,6 +13939,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"heap-js@npm:^2.1.6":
+  version: 2.1.6
+  resolution: "heap-js@npm:2.1.6"
+  checksum: cb712678bc441b5e9d5b825b1c8db170e1bc5757144ce10687d427ec53ac7ae0d8b9c9d4c18b7554949d7aad2ab8d6c71316355839bc1b7b498eaae088db5d94
+  languageName: node
+  linkType: hard
+
 "heap@npm:^0.2.6":
   version: 0.2.7
   resolution: "heap@npm:0.2.7"
@@ -14396,6 +14424,13 @@ __metadata:
   version: 8.0.1
   resolution: "immer@npm:8.0.1"
   checksum: 63d875c04882b862481a0a692816e5982975a47a57619698bc1bb52963ad3b624911991708b2b81a7af6fdac15083d408e43932d83a6a61216e5a4503efd4095
+  languageName: node
+  linkType: hard
+
+"immer@npm:9.0.12":
+  version: 9.0.12
+  resolution: "immer@npm:9.0.12"
+  checksum: bcbec6d76dac65e49068eb67ece4d407116e62b8cde3126aa89c801e408f5047763ba0aeb62f1938c1aa704bb6612f1d8302bb2a86fa1fc60fcc12d8b25dc895
   languageName: node
   linkType: hard
 
@@ -16609,7 +16644,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"loader-utils@npm:^2.0.0, loader-utils@npm:^2.0.2":
+"loader-utils@npm:^2.0.0":
   version: 2.0.2
   resolution: "loader-utils@npm:2.0.2"
   dependencies:
@@ -17789,22 +17824,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"monaco-editor-webpack-plugin@npm:7.0.1":
-  version: 7.0.1
-  resolution: "monaco-editor-webpack-plugin@npm:7.0.1"
+"monaco-editor-webpack-plugin@npm:6.0.0":
+  version: 6.0.0
+  resolution: "monaco-editor-webpack-plugin@npm:6.0.0"
   dependencies:
-    loader-utils: ^2.0.2
+    loader-utils: ^2.0.0
   peerDependencies:
-    monaco-editor: ">= 0.31.0"
+    monaco-editor: 0.30.x
     webpack: ^4.5.0 || 5.x
-  checksum: 436814c724d5033254519ef8203f0df600d15c6bf0a3bf48a42ea678086becb56ed5685df2bca4cd4107855ecf8cea73722e52b63573edba5c020ff51b4f2d31
+  checksum: 8f3ac71fe5461af10cd76f45dafb3a70672756b260b1421478cb0e690d719c6394748dabec11ea4e8f0b7db944f00a7f007d55da8e0fd470d19e9a466e789fa4
   languageName: node
   linkType: hard
 
-"monaco-editor@npm:0.31.1":
-  version: 0.31.1
-  resolution: "monaco-editor@npm:0.31.1"
-  checksum: 65be40c5570e1186938490e47ac3a23ecd8faf1bda631091a6da1de8275f049efb8d9514fcb780ca40053adf8fe9229413b4c801d86ebbade078371acbb9df3b
+"monaco-editor@npm:0.30.1":
+  version: 0.30.1
+  resolution: "monaco-editor@npm:0.30.1"
+  checksum: 474b8b2f252eaa9d0c02a9b3b9ff587abfbe7e39bb825441e9277d983a80807eca049a26900706113139e0f8c1d664ad346aa25f3c3a30aab0ac3518943e1bed
   languageName: node
   linkType: hard
 
@@ -20270,6 +20305,19 @@ __metadata:
   peerDependencies:
     react: 17.0.2
   checksum: 1c1eaa3bca7c7228d24b70932e3d7c99e70d1d04e13bb0843bbf321582bc25d7961d6b8a6978a58a598af2af496d1cedcfb1bf65f6b0960a0a8161cb8dab743c
+  languageName: node
+  linkType: hard
+
+"react-dom@patch:react-dom@npm:17.0.2#../../patches/react-dom.patch::locator=%40foxglove%2Fstudio-base%40workspace%3Apackages%2Fstudio-base":
+  version: 17.0.2
+  resolution: "react-dom@patch:react-dom@npm%3A17.0.2#../../patches/react-dom.patch::version=17.0.2&hash=e5f27c&locator=%40foxglove%2Fstudio-base%40workspace%3Apackages%2Fstudio-base"
+  dependencies:
+    loose-envify: ^1.1.0
+    object-assign: ^4.1.1
+    scheduler: ^0.20.2
+  peerDependencies:
+    react: 17.0.2
+  checksum: 6e1db6fd74ea7ed5583ea103472190d096c5976e61c847c20fa0680bcc95c3b863135680e93aa2f7ed6164f57de415b908709febe0e88f79c329f430504f9600
   languageName: node
   linkType: hard
 
@@ -23527,6 +23575,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ts-essentials@npm:9.1.2":
+  version: 9.1.2
+  resolution: "ts-essentials@npm:9.1.2"
+  peerDependencies:
+    typescript: ">=4.1.0"
+  checksum: 3b14d8511557bd1bdec068505074ee41d3b1cdb052d3c66a5046f00b483bd4722d529b32a99cca424a9d7db9caff7ba108acbf344a5477a741e0616af5649b47
+  languageName: node
+  linkType: hard
+
 "ts-essentials@npm:^2.0.3":
   version: 2.0.12
   resolution: "ts-essentials@npm:2.0.12"
@@ -24335,6 +24392,16 @@ __metadata:
   peerDependencies:
     react: ">=16.8.0"
   checksum: c5c1c34ccef6c11fe25fecef983a07f5a7260fce77b58f0f648f6ae08693a22a9077b5362b96154896e9ea756e6aaea303eb44550a293456cecb6f15cf87d73b
+  languageName: node
+  linkType: hard
+
+"use-immer@npm:0.6.0":
+  version: 0.6.0
+  resolution: "use-immer@npm:0.6.0"
+  peerDependencies:
+    immer: ">=2.0.0"
+    react: ^16.8.0 || ^17.0.1
+  checksum: 5cb3e2f411cfaf0eeab8cce8919a83fdf82e10b3acfd2d4550d9c6a0afb105aace8c0406131126557a2eab6c4ef8aef87c24a82830b75140ec6b2cdffe818d76
   languageName: node
   linkType: hard
 

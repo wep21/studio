@@ -16,6 +16,7 @@ import {
   CubeMarker,
   CylinderMarker,
   GeometryMsgs$PolygonStamped,
+  Header,
   LaserScan,
   LineListMarker,
   LineStripMarker,
@@ -661,6 +662,71 @@ export function Markers(): JSX.Element {
   );
 }
 
+FramelessMarkers.parameters = { colorScheme: "dark", chromatic: { delay: 100 } };
+export function FramelessMarkers(): JSX.Element {
+  const topics: Topic[] = [{ name: "/markers", datatype: "visualization_msgs/Marker" }];
+
+  type FramelessHeader = Omit<Header, "frame_id">;
+  type FramelessCubeMaker = Omit<CubeMarker, "header"> & { header: FramelessHeader };
+
+  const cube: MessageEvent<FramelessCubeMaker> = {
+    topic: "/markers",
+    receiveTime: { sec: 10, nsec: 0 },
+    message: {
+      header: { seq: 0, stamp: { sec: 0, nsec: 0 } },
+      id: `cube`,
+      ns: "",
+      type: 1,
+      action: 0,
+      frame_locked: false,
+      pose: {
+        position: { x: -1, y: 1, z: 0 },
+        orientation: { x: 0, y: 0, z: 0, w: 1 },
+      },
+      scale: { x: 0.5, y: 0.5, z: 0.5 },
+      color: makeColor("#e81e63", 0.5),
+      lifetime: { sec: 0, nsec: 0 },
+    },
+    sizeInBytes: 0,
+  };
+
+  const fixture = useDelayedFixture({
+    datatypes,
+    topics,
+    frame: {
+      "/markers": [cube],
+    },
+    capabilities: [],
+    activeData: {
+      currentTime: { sec: 0, nsec: 0 },
+    },
+  });
+
+  return (
+    <PanelSetup fixture={fixture}>
+      <ThreeDimensionalViz
+        overrideConfig={{
+          ...ThreeDimensionalViz.defaultConfig,
+          checkedKeys: ["name:Topics", "t:/markers", "t:/tf", `t:${FOXGLOVE_GRID_TOPIC}`],
+          expandedKeys: ["name:Topics", "t:/markers", "t:/tf", `t:${FOXGLOVE_GRID_TOPIC}`],
+          cameraState: {
+            distance: 5.5,
+            perspective: true,
+            phi: 0.5,
+            targetOffset: [-0.5, 0.75, 0],
+            thetaOffset: -0.25,
+            fovy: 0.75,
+            near: 0.01,
+            far: 5000,
+            target: [0, 0, 0],
+            targetOrientation: [0, 0, 0, 1],
+          },
+        }}
+      />
+    </PanelSetup>
+  );
+}
+
 ArrowMarkers.parameters = { colorScheme: "dark" };
 export function ArrowMarkers(): JSX.Element {
   const topics: Topic[] = [
@@ -689,7 +755,7 @@ export function ArrowMarkers(): JSX.Element {
       child_frame_id: "sensor",
       transform: {
         translation: { x: 0, y: 0, z: 1 },
-        rotation: QUAT_IDENTITY,
+        rotation: { x: 0.383, y: 0, z: 0, w: 0.924 },
       },
     },
     sizeInBytes: 0,
@@ -699,17 +765,17 @@ export function ArrowMarkers(): JSX.Element {
     topic: "/arrows",
     receiveTime: { sec: 10, nsec: 0 },
     message: {
-      header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "sensor" },
+      header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "base_link" },
       id: `arrow1`,
       ns: "",
       type: 0,
       action: 0,
       frame_locked: false,
       pose: {
-        position: { x: -1, y: 1, z: -1 },
-        orientation: { x: 0, y: -Math.SQRT1_2, z: 0, w: Math.SQRT1_2 },
+        position: { x: 0.4, y: 0, z: 1 },
+        orientation: QUAT_IDENTITY,
       },
-      scale: { x: 0.5, y: 0.1, z: 0.1 },
+      scale: { x: 0.75, y: 0.001, z: 0.25 },
       color: makeColor("#f44336", 0.5),
       lifetime: { sec: 0, nsec: 0 },
     },
@@ -727,10 +793,10 @@ export function ArrowMarkers(): JSX.Element {
       action: 0,
       frame_locked: false,
       pose: {
-        position: { x: 0, y: 1, z: -1 },
-        orientation: { x: 0, y: -Math.SQRT1_2, z: 0, w: Math.SQRT1_2 },
+        position: { x: 0, y: 0.3, z: 0 },
+        orientation: { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 },
       },
-      scale: { x: 1, y: 0.05, z: 0.05 },
+      scale: { x: 0.3, y: 0.05, z: 0.05 },
       color: makeColor("#4caf50", 0.5),
       lifetime: { sec: 0, nsec: 0 },
     },
@@ -748,13 +814,13 @@ export function ArrowMarkers(): JSX.Element {
       action: 0,
       frame_locked: false,
       pose: {
-        position: { x: 1, y: 1, z: -1 },
-        orientation: QUAT_IDENTITY,
+        position: { x: 0, y: 0, z: 0.35 },
+        orientation: { x: 0, y: -Math.SQRT1_2, z: 0, w: Math.SQRT1_2 },
       },
-      scale: { x: 0.05, y: 0.05, z: 1 },
+      scale: { x: 0.05, y: 0.1, z: 0.15 },
       points: [
         { x: 0, y: 0, z: 0 },
-        { x: 0, y: 0, z: 1 },
+        { x: 0.3, y: 0, z: 0 },
       ],
       color: makeColor("#2196f3", 0.5),
       lifetime: { sec: 0, nsec: 0 },
@@ -786,9 +852,122 @@ export function ArrowMarkers(): JSX.Element {
           cameraState: {
             distance: 4,
             perspective: true,
-            phi: 0.83,
-            targetOffset: [-0.094, 0.85, 0],
-            thetaOffset: -0.29,
+            phi: 1,
+            targetOffset: [-0.6, 0.5, 0],
+            thetaOffset: -1,
+            fovy: 0.75,
+            near: 0.01,
+            far: 5000,
+            target: [0, 0, 0],
+            targetOrientation: [0, 0, 0, 1],
+          },
+        }}
+      />
+    </PanelSetup>
+  );
+}
+
+SphereListPointsTransform.parameters = { colorScheme: "dark" };
+export function SphereListPointsTransform(): JSX.Element {
+  function makeSphere(id: string, color: string, scale: number) {
+    return {
+      topic: "/sphere",
+      receiveTime: { sec: 10, nsec: 0 },
+      message: {
+        header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "camera_color_optical_frame" },
+        id,
+        ns: "",
+        type: 7,
+        action: 0,
+        frame_locked: false,
+        pose: {
+          position: { x: 0, y: 0, z: 0 },
+          orientation: { x: 0, y: 0, z: 0, w: 1 },
+        },
+        points: [
+          {
+            x: 0,
+            y: 0,
+            z: 0,
+          },
+        ],
+        scale: { x: scale, y: scale, z: scale },
+        color: makeColor(color, 1),
+        lifetime: { sec: 0, nsec: 0 },
+      },
+      sizeInBytes: 0,
+    };
+  }
+
+  const topics: Topic[] = [
+    { name: "/tf", datatype: "geometry_msgs/TransformStamped" },
+    { name: "/sphere", datatype: "visualization_msgs/Marker" },
+  ];
+
+  const tf1: MessageEvent<TF> = {
+    topic: "/tf",
+    receiveTime: { sec: 10, nsec: 0 },
+    message: {
+      header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "camera_link" },
+      child_frame_id: "camera_color_optical_frame",
+      transform: {
+        translation: { x: 0.5, y: -0.5, z: 0 },
+        rotation: {
+          x: -0.5,
+          y: 0.5,
+          z: -0.5,
+          w: 0.5,
+        },
+      },
+    },
+    sizeInBytes: 0,
+  };
+
+  const sphere1 = makeSphere("sphere1", "#ff0000", 0.1);
+  sphere1.message.pose.position.x = 0.5;
+
+  const sphere2 = makeSphere("sphere2", "#00ff00", 0.1);
+  sphere2.message.pose.position.y = 0.5;
+
+  const sphere3 = makeSphere("sphere3", "#0000ff", 0.1);
+  sphere3.message.pose.position.z = 0.5;
+
+  const sphere4 = makeSphere("sphere4", "#ff0000", 0.2);
+  sphere4.message.points[0]!.x = 0.75;
+
+  const sphere5 = makeSphere("sphere5", "#00ff00", 0.2);
+  sphere5.message.points[0]!.y = 0.75;
+
+  const sphere6 = makeSphere("sphere6", "#0000ff", 0.2);
+  sphere6.message.points[0]!.z = 0.75;
+
+  const fixture = useDelayedFixture({
+    datatypes,
+    topics,
+    frame: {
+      "/tf": [tf1],
+      "/sphere": [sphere1, sphere2, sphere3, sphere4, sphere5, sphere6],
+    },
+    capabilities: [],
+    activeData: {
+      currentTime: { sec: 0, nsec: 0 },
+    },
+  });
+
+  return (
+    <PanelSetup fixture={fixture}>
+      <ThreeDimensionalViz
+        overrideConfig={{
+          ...ThreeDimensionalViz.defaultConfig,
+          checkedKeys: ["name:Topics", "t:/sphere", "t:/tf", `t:${FOXGLOVE_GRID_TOPIC}`],
+          expandedKeys: ["name:Topics", "t:/sphere", "t:/tf", `t:${FOXGLOVE_GRID_TOPIC}`],
+          followTf: "camera_link",
+          cameraState: {
+            distance: 4,
+            perspective: true,
+            phi: 1.2,
+            targetOffset: [0.5, 0, 0],
+            thetaOffset: -0.5,
             fovy: 0.75,
             near: 0.01,
             far: 5000,
@@ -1930,10 +2109,20 @@ endsolid AssimpScene`),
     sizeInBytes: 0,
   };
 
+  const coloredMesh = {
+    ...mesh,
+    message: {
+      ...mesh.message,
+      id: "coloredMesh",
+      mesh_use_embedded_materials: false,
+      pose: { ...mesh.message.pose, position: { x: -1, y: 0, z: 0 } },
+    },
+  };
+
   const fixture = useDelayedFixture({
     datatypes,
     topics,
-    frame: { "/markers": [mesh] },
+    frame: { "/markers": [mesh, coloredMesh] },
     capabilities: [],
     activeData: { currentTime: { sec: 0, nsec: 0 } },
   });

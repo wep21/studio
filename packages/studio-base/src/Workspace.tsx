@@ -10,7 +10,8 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { Link, makeStyles, Stack, Text, useTheme } from "@fluentui/react";
+import { Link, makeStyles, Text, useTheme } from "@fluentui/react";
+import { Box, Stack } from "@mui/material";
 import { extname } from "path";
 import {
   useState,
@@ -120,7 +121,7 @@ function AddPanel() {
           <Link onClick={openLayoutBrowser}>Select a layout</Link> to get started!
         </Text>
       ) : (
-        <PanelList onPanelSelect={addPanel} />
+        <PanelList onPanelSelect={addPanel} backgroundColor={theme.palette.neutralLighterAlt} />
       )}
     </SidebarContent>
   );
@@ -204,10 +205,10 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
 
   // When a player is activated, hide the open dialog.
   useLayoutEffect(() => {
-    if (isPlayerPresent) {
+    if (playerPresence === PlayerPresence.PRESENT) {
       setShowOpenDialog(undefined);
     }
-  }, [isPlayerPresent]);
+  }, [playerPresence]);
 
   const { setHelpInfo } = useHelpInfo();
 
@@ -540,8 +541,8 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
     >
       {enableOpenDialog === true && showOpenDialog != undefined && (
         <OpenDialog
-          activeView={showOpenDialog?.view}
-          activeDataSource={showOpenDialog?.activeDataSource}
+          activeView={showOpenDialog.view}
+          activeDataSource={showOpenDialog.activeDataSource}
           onDismiss={() => setShowOpenDialog(undefined)}
         />
       )}
@@ -563,7 +564,7 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
             <Stack>
               <PanelLayout />
               {play && pause && seek && (
-                <Stack.Item disableShrink>
+                <Box flexShrink={0}>
                   <PlaybackControls
                     play={play}
                     pause={pause}
@@ -571,7 +572,7 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
                     isPlaying={isPlaying}
                     getTimeInfo={getTimeInfo}
                   />
-                </Stack.Item>
+                </Box>
               )}
             </Stack>
           </RemountOnValueChange>
