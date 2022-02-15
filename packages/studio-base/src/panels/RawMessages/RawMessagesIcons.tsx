@@ -75,46 +75,53 @@ export default function RawMessagesIcons({
     [basePath, filterPath, onTopicPathChange],
   );
 
-  const buttons = useMemo(
-    () =>
-      [
-        filterPath.length > 0 && {
-          key: "filter",
-          title: "Filter on this value",
-          onClick: onFilter,
-          children: <FilterIcon fontSize="inherit" />,
-        },
-        plotableRosTypes.includes(primitiveType) && {
-          key: "line-chart",
-          title: "Line chart",
-          onClick: () => openPlotPanel(singleSlicePath),
-          children: <LineChartIcon fontSize="inherit" />,
-        },
-        plotableRosTypes.includes(primitiveType) &&
-          multiSlicePath !== singleSlicePath && {
-            key: "plot",
-            title: "Scatter plot",
-            onClick: () => openPlotPanel(multiSlicePath),
-            children: <ScatterPlotIcon fontSize="inherit" />,
-          },
-        transitionableRosTypes.includes(primitiveType) &&
-          multiSlicePath === singleSlicePath && {
-            key: "state-transitions",
-            title: "State transitions",
-            onClick: () => openStateTransitionsPanel(singleSlicePath),
-            children: <MoreHorizIcon fontSize="inherit" />,
-          },
-      ].filter(Boolean),
-    [
-      filterPath,
-      multiSlicePath,
-      onFilter,
-      openPlotPanel,
-      openStateTransitionsPanel,
-      primitiveType,
-      singleSlicePath,
-    ],
-  );
+  const buttons = useMemo(() => {
+    const arr = [];
+
+    if (filterPath.length > 0) {
+      arr.push({
+        key: "filter",
+        title: "Filter on this value",
+        onClick: onFilter,
+        children: <FilterIcon fontSize="inherit" />,
+      });
+    }
+    if (plotableRosTypes.includes(primitiveType)) {
+      arr.push({
+        key: "line-chart",
+        title: "Line chart",
+        onClick: () => openPlotPanel(singleSlicePath),
+        children: <LineChartIcon fontSize="inherit" />,
+      });
+
+      if (multiSlicePath !== singleSlicePath) {
+        buttons.push({
+          key: "plot",
+          title: "Scatter plot",
+          onClick: () => openPlotPanel(multiSlicePath),
+          children: <ScatterPlotIcon fontSize="inherit" />,
+        });
+      }
+    }
+    if (transitionableRosTypes.includes(primitiveType) && multiSlicePath === singleSlicePath) {
+      arr.push({
+        key: "state-transitions",
+        title: "State transitions",
+        onClick: () => openStateTransitionsPanel(singleSlicePath),
+        children: <MoreHorizIcon fontSize="inherit" />,
+      });
+    }
+
+    return arr;
+  }, [
+    filterPath,
+    multiSlicePath,
+    onFilter,
+    openPlotPanel,
+    openStateTransitionsPanel,
+    primitiveType,
+    singleSlicePath,
+  ]);
 
   return (
     <div className={classes.root}>
