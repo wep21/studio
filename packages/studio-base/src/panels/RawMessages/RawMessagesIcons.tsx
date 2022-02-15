@@ -10,14 +10,17 @@
 //   This source code is licensed under the Apache License, Version 2.0,
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
-import { mergeStyles } from "@fluentui/react";
-import ChartBubbleIcon from "@mdi/svg/svg/chart-bubble.svg";
-import ChartLineVariantIcon from "@mdi/svg/svg/chart-line-variant.svg";
-import DotsHorizontalIcon from "@mdi/svg/svg/dots-horizontal.svg";
-import FilterIcon from "@mdi/svg/svg/filter.svg";
-import { ReactElement, useCallback } from "react";
 
-import Icon from "@foxglove/studio-base/components/Icon";
+import {
+  FilterAlt as FilterIcon,
+  MoreHoriz as MoreHorizIcon,
+  ScatterPlot as ScatterPlotIcon,
+  ShowChart as LineChartIcon,
+} from "@mui/icons-material";
+import { IconButton, Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
+import { ReactElement, useCallback, useMemo } from "react";
+
 import { openSiblingPlotPanel, plotableRosTypes } from "@foxglove/studio-base/panels/Plot";
 import {
   openSiblingStateTransitionsPanel,
@@ -34,11 +37,17 @@ type Props = {
   openSiblingPanel: OpenSiblingPanel;
 };
 
-const iconClassName = mergeStyles({
-  "> svg": {
-    verticalAlign: "top !important",
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(0.25),
   },
-});
+  icon: {
+    fontSize: 12,
+    padding: 0,
+  },
+}));
 
 export default function RawMessagesIcons({
   valueAction,
@@ -46,6 +55,7 @@ export default function RawMessagesIcons({
   onTopicPathChange,
   openSiblingPanel,
 }: Props): ReactElement {
+  const classes = useStyles();
   const { singleSlicePath, multiSlicePath, primitiveType, filterPath } = valueAction;
 
   const openPlotPanel = useCallback(
@@ -65,49 +75,58 @@ export default function RawMessagesIcons({
     [basePath, filterPath, onTopicPathChange],
   );
 
+  const buttons = useMemo(
+    () =>
+      [
+        filterPath.length > 0 && {
+          key: "filter",
+          title: "Filter on this value",
+          onClick: onFilter,
+          children: <FilterIcon fontSize="inherit" />,
+        },
+        plotableRosTypes.includes(primitiveType) && {
+          key: "line-chart",
+          title: "Line chart",
+          onClick: () => openPlotPanel(singleSlicePath),
+          children: <LineChartIcon fontSize="inherit" />,
+        },
+        plotableRosTypes.includes(primitiveType) &&
+          multiSlicePath !== singleSlicePath && {
+            key: "plot",
+            title: "Scatter plot",
+            onClick: () => openPlotPanel(multiSlicePath),
+            children: <ScatterPlotIcon fontSize="inherit" />,
+          },
+        transitionableRosTypes.includes(primitiveType) &&
+          multiSlicePath === singleSlicePath && {
+            key: "state-transitions",
+            title: "State transitions",
+            onClick: () => openStateTransitionsPanel(singleSlicePath),
+            children: <MoreHorizIcon fontSize="inherit" />,
+          },
+      ].filter(Boolean),
+    [
+      filterPath,
+      multiSlicePath,
+      onFilter,
+      openPlotPanel,
+      openStateTransitionsPanel,
+      primitiveType,
+      singleSlicePath,
+    ],
+  );
+
   return (
-    <span>
-      {filterPath.length > 0 && (
-        <Icon
-          fade
-          className={iconClassName}
-          onClick={onFilter}
-          tooltip="filter on this value"
-          key="filter"
-        >
-          <FilterIcon />
-        </Icon>
-      )}
-      {plotableRosTypes.includes(primitiveType) && (
-        <Icon
-          fade
-          className={iconClassName}
-          onClick={openPlotPanel(singleSlicePath)}
-          tooltip="Line chart"
-        >
-          <ChartLineVariantIcon />
-        </Icon>
-      )}
-      {plotableRosTypes.includes(primitiveType) && multiSlicePath !== singleSlicePath && (
-        <Icon
-          fade
-          className={iconClassName}
-          onClick={openPlotPanel(multiSlicePath)}
-          tooltip="Scatter plot"
-        >
-          <ChartBubbleIcon />
-        </Icon>
-      )}
-      {transitionableRosTypes.includes(primitiveType) && multiSlicePath === singleSlicePath && (
-        <Icon
-          fade
-          className={iconClassName}
-          onClick={openStateTransitionsPanel(singleSlicePath)}
-          tooltip="State Transitions"
-        >
-          <DotsHorizontalIcon />
-        </Icon>
-      )}
-    </span>
+    <div className={classes.root}>
+      {buttons.map(({ key, ...buttonProps }) => (
+        <IconButton
+          key={key}
+          className={classes.icon}
+          color="inherit"
+          size="small"
+          {...buttonProps}
+        />
+      ))}
+    </div>
   );
 }
