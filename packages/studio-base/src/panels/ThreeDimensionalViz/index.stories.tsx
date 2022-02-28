@@ -16,6 +16,7 @@ import {
   CubeMarker,
   CylinderMarker,
   GeometryMsgs$PolygonStamped,
+  GeometryMsgs$PoseArray,
   Header,
   LaserScan,
   LineListMarker,
@@ -1441,6 +1442,138 @@ export function GeometryMsgs_Polygon(): JSX.Element {
             perspective: true,
             phi: 1,
             targetOffset: [-0.7, 2.1, 0],
+            thetaOffset: -0.25,
+            fovy: 0.75,
+            near: 0.01,
+            far: 5000,
+            target: [0, 0, 0],
+            targetOrientation: [0, 0, 0, 1],
+          },
+        }}
+      />
+    </PanelSetup>
+  );
+}
+
+GeometryMsgs_PoseArray.parameters = { colorScheme: "dark" };
+export function GeometryMsgs_PoseArray(): JSX.Element {
+  const topics: Topic[] = [
+    { name: "/baselink_path", datatype: "geometry_msgs/PoseArray" },
+    { name: "/sensor_path", datatype: "geometry_msgs/PoseArray" },
+    { name: "/tf", datatype: "geometry_msgs/TransformStamped" },
+  ];
+  const tf1: MessageEvent<TF> = {
+    topic: "/tf",
+    receiveTime: { sec: 10, nsec: 0 },
+    message: {
+      header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "map" },
+      child_frame_id: "base_link",
+      transform: {
+        translation: { x: 1e7, y: 0, z: 0 },
+        rotation: QUAT_IDENTITY,
+      },
+    },
+    sizeInBytes: 0,
+  };
+  const tf2: MessageEvent<TF> = {
+    topic: "/tf",
+    receiveTime: { sec: 10, nsec: 0 },
+    message: {
+      header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "base_link" },
+      child_frame_id: "sensor",
+      transform: {
+        translation: { x: 0, y: 0, z: 1 },
+        rotation: QUAT_IDENTITY,
+      },
+    },
+    sizeInBytes: 0,
+  };
+  const tf3: MessageEvent<TF> = {
+    topic: "/tf",
+    receiveTime: { sec: 10, nsec: 0 },
+    message: {
+      header: { seq: 0, stamp: { sec: 10, nsec: 0 }, frame_id: "base_link" },
+      child_frame_id: "sensor",
+      transform: {
+        translation: { x: 0, y: 5, z: 1 },
+        rotation: QUAT_IDENTITY,
+      },
+    },
+    sizeInBytes: 0,
+  };
+
+  const q = (): quat => [0, 0, 0, 1];
+  const identity = q();
+  const makeOrientation = (i: number) => {
+    const o = quat.rotateZ(q(), identity, Math.PI * 2 * (i / 10));
+    return { x: o[0], y: o[1], z: o[2], w: o[3] };
+  };
+
+  const baseLinkPath: MessageEvent<GeometryMsgs$PoseArray> = {
+    topic: "/baselink_path",
+    receiveTime: { sec: 10, nsec: 0 },
+    message: {
+      header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "base_link" },
+      poses: [...Array(10)].map((_, i) => ({
+        position: { x: i - 5, y: 0, z: 1 },
+        orientation: makeOrientation(i),
+      })),
+    },
+    sizeInBytes: 0,
+  };
+
+  const sensorPath: MessageEvent<GeometryMsgs$PoseArray> = {
+    topic: "/sensor_path",
+    receiveTime: { sec: 10, nsec: 0 },
+    message: {
+      header: { seq: 0, stamp: { sec: 0, nsec: 0 }, frame_id: "sensor" },
+      poses: [...Array(10)].map((_, i) => ({
+        position: { x: i - 5, y: 0, z: i % 2 },
+        orientation: makeOrientation(i),
+      })),
+    },
+    sizeInBytes: 0,
+  };
+
+  const fixture = useDelayedFixture({
+    datatypes,
+    topics,
+    frame: {
+      "/baselink_path": [baseLinkPath],
+      "/sensor_path": [sensorPath],
+      "/tf": [tf1, tf2, tf3],
+    },
+    capabilities: [],
+    activeData: {
+      currentTime: { sec: 3, nsec: 0 },
+    },
+  });
+
+  return (
+    <PanelSetup fixture={fixture}>
+      <ThreeDimensionalViz
+        overrideConfig={{
+          ...ThreeDimensionalViz.defaultConfig,
+          checkedKeys: [
+            "name:Topics",
+            "t:/tf",
+            "t:/baselink_path",
+            "t:/sensor_path",
+            `t:${FOXGLOVE_GRID_TOPIC}`,
+          ],
+          expandedKeys: [
+            "name:Topics",
+            "t:/tf",
+            "t:/baselink_path",
+            "t:/sensor_path",
+            `t:${FOXGLOVE_GRID_TOPIC}`,
+          ],
+          followTf: "base_link",
+          cameraState: {
+            distance: 15,
+            perspective: true,
+            phi: 1,
+            targetOffset: [0, 2, 0],
             thetaOffset: -0.25,
             fovy: 0.75,
             near: 0.01,

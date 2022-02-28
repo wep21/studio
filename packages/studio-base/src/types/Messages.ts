@@ -45,6 +45,11 @@ export type StampedMessage = Readonly<{
   header: Header;
 }>;
 
+export type GeometryMsgs$PoseArray = Readonly<{
+  header: Header;
+  poses: Pose[];
+}>;
+
 export type GeometryMsgs$PolygonStamped = Readonly<{
   header: Header;
   polygon: Polygon;
