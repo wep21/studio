@@ -13,6 +13,7 @@
 
 import {
   Chart,
+  Ticks,
   LineElement,
   PointElement,
   LineController,
@@ -83,6 +84,32 @@ Chart.register(
   AnnotationPlugin,
 );
 
+/**
+ * Adjust the `ticks` of the chart options to ensure the first/last x labels remain a constant
+ * width. See https://github.com/foxglove/studio/issues/2926
+ *
+ * Because this requires passing a `callback` function for the tick options, this has to be done in
+ * the worker, since functions can't be sent via postMessage.
+ */
+function fixTicks(args: RpcUpdateEvent): RpcUpdateEvent {
+  const xScale = args.options?.scales?.x;
+  const numberFormat = new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  if (xScale?.ticks) {
+    xScale.ticks.callback = function (value, index, ticks) {
+      // use a fixed formatter for the first/last ticks
+      if (index === 0 || index === ticks.length - 1) {
+        return numberFormat.format(value as number);
+      }
+      // otherwise use chart.js's default formatter
+      return Ticks.formatters.numeric.apply(this, [value as number, index, ticks]);
+    };
+  }
+  return args;
+}
+
 // Since we use a capped number of web-workers, a single web-worker may be running multiple chartjs instances
 // The ChartJsWorkerMux forwards an rpc request for a specific chartjs instance id to the appropriate instance
 export default class ChartJsMux {
@@ -124,7 +151,7 @@ export default class ChartJsMux {
       this._getChart(args.id).panmove(args.event),
     );
 
-    rpc.receive("update", (args: RpcUpdateEvent) => this._getChart(args.id).update(args));
+    rpc.receive("update", (args: RpcUpdateEvent) => this._getChart(args.id).update(fixTicks(args)));
     rpc.receive("destroy", (args: RpcEvent<void>) => {
       const manager = this._managers.get(args.id);
       if (manager) {
