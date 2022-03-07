@@ -156,7 +156,7 @@ function BaseRenderer(props: Props): JSX.Element {
       : orphanedFrame;
   }, [followTf, transforms, orphanedFrame]);
 
-  const fixedFrame = useMemo(() => renderFrame?.root(), [renderFrame]);
+  const fixedFrame = useMemo(() => renderFrame.root(), [renderFrame]);
 
   // We use useState to store the cameraState instead of using config directly in order to
   // speed up the pan/rotate performance of the 3D panel. This allows us to update the cameraState
@@ -402,24 +402,53 @@ const configSchema: PanelConfigSchema<ThreeDimensionalVizConfig> = [
     title: "Automatically determine background color based on the color scheme",
   },
   { key: "customBackgroundColor", type: "color", title: "Background color" },
+  {
+    key: "ignoreColladaUpAxis",
+    type: "toggle",
+    title: "Ignore <up_axis> in COLLADA meshes",
+  },
+  { key: "clickToPublishPoseEstimateTopic", type: "text", title: "Pose estimate topic" },
+  { key: "clickToPublishPoseTopic", type: "text", title: "Pose topic" },
+  { key: "clickToPublishPointTopic", type: "text", title: "Point topic" },
+  {
+    key: "clickToPublishPoseEstimateXDeviation",
+    type: "number",
+    title: "Pose estimate X std deviation",
+  },
+  {
+    key: "clickToPublishPoseEstimateYDeviation",
+    type: "number",
+    title: "Pose estimate Y std deviation",
+  },
+  {
+    key: "clickToPublishPoseEstimateThetaDeviation",
+    type: "number",
+    title: "Pose estimate Theta std deviation",
+  },
 ];
 
 BaseRenderer.displayName = "ThreeDimensionalViz";
 BaseRenderer.panelType = "3D Panel";
 BaseRenderer.defaultConfig = {
-  checkedKeys: ["name:Topics"],
-  expandedKeys: ["name:Topics"],
-  followTf: undefined,
-  followMode: "follow",
+  autoSyncCameraState: false,
+  autoTextBackgroundColor: true,
   cameraState: {},
+  checkedKeys: ["name:Topics"],
+  clickToPublishPoseTopic: "/move_base_simple/goal",
+  clickToPublishPointTopic: "/clicked_point",
+  clickToPublishPoseEstimateTopic: "/initialpose",
+  clickToPublishPoseEstimateXDeviation: 0.5,
+  clickToPublishPoseEstimateYDeviation: 0.5,
+  clickToPublishPoseEstimateThetaDeviation: Math.PI / 12,
+  customBackgroundColor: "#000000",
+  diffModeEnabled: true,
+  expandedKeys: ["name:Topics"],
+  followMode: "follow",
+  followTf: undefined,
   modifiedNamespaceTopics: [],
   pinTopics: false,
   settingsByKey: {},
-  autoSyncCameraState: false,
-  autoTextBackgroundColor: true,
-  diffModeEnabled: true,
   useThemeBackgroundColor: true,
-  customBackgroundColor: "#000000",
 } as ThreeDimensionalVizConfig;
 BaseRenderer.configSchema = configSchema;
 

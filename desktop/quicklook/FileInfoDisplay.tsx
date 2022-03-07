@@ -2,7 +2,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import styled from "styled-components";
 
 import Logger from "@foxglove/log";
@@ -10,9 +10,10 @@ import { Time, toDate } from "@foxglove/rostime";
 
 import bagIcon from "../../resources/icon/BagIcon.png";
 import mcapIcon from "../../resources/icon/McapIcon.png";
-import ErrorInfo from "./ErrorInfo";
+import Flash from "./Flash";
 import formatByteSize from "./formatByteSize";
-import { FileInfo, TopicInfo } from "./getInfo";
+import * as styleConstants from "./styleConstants";
+import { FileInfo, TopicInfo } from "./types";
 
 const log = Logger.getLogger(__filename);
 
@@ -46,16 +47,34 @@ const FileName = styled(SummaryRow)`
   overflow: hidden;
 `;
 
+const IconContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  @media (max-width: ${styleConstants.breakpoints.narrowMaxWidth}) {
+    display: none;
+  }
+`;
+
+const FileType = styled.span`
+  font-size: 10px;
+  opacity: 0.25;
+`;
+
 const TimeLabel = styled.span`
   display: inline-block;
   width: 40px;
 `;
 
 const TopicList = styled.table`
-  width: 100%;
-  max-width: 100%;
   word-break: break-word;
   border-spacing: 0 4px;
+
+  @media (max-width: ${styleConstants.breakpoints.narrowMaxWidth}) {
+    margin-left: -${styleConstants.bodyPadding};
+    margin-right: -${styleConstants.bodyPadding};
+  }
 `;
 
 const TopicRowWrapper = styled.tr`
@@ -69,11 +88,15 @@ const TopicRowWrapper = styled.tr`
     }
     > :first-child {
       background: var(--zebra-color);
-      border-radius: 4px 0 0 4px;
+      @media (min-width: ${styleConstants.breakpoints.narrowMinWidth}) {
+        border-radius: 4px 0 0 4px;
+      }
     }
     > :last-child {
       background: var(--zebra-color);
-      border-radius: 0 4px 4px 0;
+      @media (min-width: ${styleConstants.breakpoints.narrowMinWidth}) {
+        border-radius: 0 4px 4px 0;
+      }
     }
   }
   border-collapse: separate;
@@ -109,10 +132,21 @@ const Datatype = styled.div`
   opacity: 0.5;
 `;
 
+const HideNarrow = styled.div`
+  @media (max-width: ${styleConstants.breakpoints.narrowMaxWidth}) {
+    display: none;
+  }
+`;
+const ShowNarrow = styled.div`
+  @media (min-width: ${styleConstants.breakpoints.narrowMinWidth}) {
+    display: none;
+  }
+`;
+
 function TopicRow({ info: { topic, datatype, numMessages, numConnections } }: { info: TopicInfo }) {
   return (
     <TopicRowWrapper>
-      <MessageCount>{numMessages.toLocaleString()}</MessageCount>
+      <MessageCount>{numMessages?.toLocaleString()}</MessageCount>
       <TopicNameAndDatatype>
         <TopicName>{topic}</TopicName>
         <Datatype>
@@ -124,6 +158,13 @@ function TopicRow({ info: { topic, datatype, numMessages, numConnections } }: { 
   );
 }
 
+function formatCount(count: number | bigint | undefined, noun: string): string | undefined {
+  if (count == undefined || count === 0 || count === 0n) {
+    return undefined;
+  }
+  return `${count.toLocaleString()}\xa0${noun}${count === 1 || count === 1n ? "" : "s"}`;
+}
+
 export default function FileInfoDisplay({
   fileStats,
   fileInfo,
@@ -133,34 +174,58 @@ export default function FileInfoDisplay({
   fileInfo?: FileInfo;
   error?: Error;
 }): JSX.Element {
+  const compressionTypes = useMemo(
+    () =>
+      fileInfo?.compressionTypes &&
+      Array.from(fileInfo.compressionTypes)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [fileInfo?.compressionTypes],
+  );
   useEffect(() => error && console.error(error), [error]);
   return (
-    <div style={{ width: "100%" }}>
+    <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
       <div
         style={{
           display: "flex",
-          flexFlow: "row wrap",
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 16,
         }}
       >
-        <img src={fileStats.name.endsWith(".mcap") ? mcapIcon : bagIcon} style={{ width: 128 }} />
-        <div style={{ display: "flex", flexDirection: "column", minWidth: 300, flex: "1 1 0" }}>
-          <FileName>{fileStats.name}</FileName>
+        <IconContainer>
+          <img src={fileStats.name.endsWith(".mcap") ? mcapIcon : bagIcon} style={{ width: 128 }} />
+          {fileInfo?.fileType && (
+            <HideNarrow>
+              <FileType>{fileInfo.fileType}</FileType>
+            </HideNarrow>
+          )}
+        </IconContainer>
+        <div style={{ display: "flex", flexDirection: "column", flex: "1 1 0" }}>
+          <HideNarrow>
+            <FileName>{fileStats.name}</FileName>
+          </HideNarrow>
+          {fileInfo?.fileType && (
+            <ShowNarrow>
+              <FileType>{fileInfo.fileType}</FileType>
+            </ShowNarrow>
+          )}
           <SummaryRow>
-            {fileInfo && (
-              <>
-                {fileInfo.topics.length.toLocaleString()}{" "}
-                {fileInfo.topics.length === 1 ? "topic" : "topics"},{" "}
-                {fileInfo.numChunks.toLocaleString()}{" "}
-                {fileInfo.numChunks === 1 ? "chunk" : "chunks"},{" "}
-                {fileInfo.totalMessages.toLocaleString()}{" "}
-                {fileInfo.totalMessages === 1 ? "message" : "messages"},{" "}
-              </>
-            )}
-            {formatByteSize(fileStats.size)}
+            {[
+              formatCount(fileInfo?.topics?.length, "topic"),
+              formatCount(fileInfo?.numChunks, "chunk"),
+              formatCount(fileInfo?.totalMessages, "message"),
+              formatCount(fileInfo?.numAttachments, "attachment"),
+              formatByteSize(fileStats.size).replace(/ /g, "\xa0"),
+            ]
+              .filter(Boolean)
+              .join(", ")}
           </SummaryRow>
+          {compressionTypes && (
+            <SummaryRow>
+              Compression: {compressionTypes.length === 0 ? "none" : compressionTypes.join(", ")}
+            </SummaryRow>
+          )}
           {fileInfo?.startTime && (
             <SummaryRow style={{ fontVariantNumeric: "tabular-nums" }}>
               <TimeLabel>Start:</TimeLabel>
@@ -175,10 +240,10 @@ export default function FileInfoDisplay({
           )}
         </div>
       </div>
-      {error && <ErrorInfo>{error.toString()}</ErrorInfo>}
+      {error && <Flash type="error">{error.toString()}</Flash>}
       <TopicList>
         <tbody>
-          {fileInfo?.topics.map((topicInfo, i) => (
+          {fileInfo?.topics?.map((topicInfo, i) => (
             <TopicRow key={i} info={topicInfo} />
           ))}
         </tbody>

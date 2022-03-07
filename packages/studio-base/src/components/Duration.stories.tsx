@@ -2,12 +2,12 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { Stack } from "@fluentui/react";
+import { Stack } from "@mui/material";
 import { ComponentProps, useState } from "react";
 
 import { AppSetting } from "@foxglove/studio-base/AppSetting";
 import AppConfigurationContext from "@foxglove/studio-base/context/AppConfigurationContext";
-import { makeConfiguration } from "@foxglove/studio-base/util/makeConfiguration";
+import { makeMockAppConfiguration } from "@foxglove/studio-base/util/makeMockAppConfiguration";
 
 import Duration from "./Duration";
 
@@ -20,20 +20,20 @@ type Props = ComponentProps<typeof Duration>;
 
 function DurationStory(props: Props): JSX.Element {
   const [secAppConfig] = useState(() =>
-    makeConfiguration([
+    makeMockAppConfiguration([
       [AppSetting.TIME_FORMAT, "SEC"],
       [AppSetting.TIMEZONE, "UTC"],
     ]),
   );
   const [todAppConfig] = useState(() =>
-    makeConfiguration([
+    makeMockAppConfiguration([
       [AppSetting.TIME_FORMAT, "TOD"],
       [AppSetting.TIMEZONE, "UTC"],
     ]),
   );
 
   return (
-    <Stack tokens={{ padding: 16, childrenGap: 16 }}>
+    <Stack padding={2} spacing={2}>
       <AppConfigurationContext.Provider value={secAppConfig}>
         <Duration {...props} />
       </AppConfigurationContext.Provider>

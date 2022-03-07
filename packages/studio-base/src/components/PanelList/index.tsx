@@ -10,19 +10,33 @@
 //   This source code is licensed under the Apache License, Version 2.0,
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
-import { makeStyles, useTheme } from "@fluentui/react";
-import MagnifyIcon from "@mdi/svg/svg/magnify.svg";
-import { Stack, Typography } from "@mui/material";
+
+import SearchIcon from "@mui/icons-material/Search";
+import {
+  AppBar,
+  Theme,
+  Toolbar,
+  Card,
+  CardActionArea,
+  CardContent,
+  CardMedia,
+  Container,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { makeStyles } from "@mui/styles";
+import cx from "classnames";
 import fuzzySort from "fuzzysort";
 import { isEmpty } from "lodash";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useDrag } from "react-dnd";
 import { MosaicDragType, MosaicPath } from "react-mosaic-component";
 
-import Flex from "@foxglove/studio-base/components/Flex";
-import Icon from "@foxglove/studio-base/components/Icon";
 import { LegacyInput } from "@foxglove/studio-base/components/LegacyStyledComponents";
-import { Item } from "@foxglove/studio-base/components/Menu";
 import TextHighlight from "@foxglove/studio-base/components/TextHighlight";
 import { useTooltip } from "@foxglove/studio-base/components/Tooltip";
 import {
@@ -36,50 +50,76 @@ import {
   SavedProps,
   MosaicDropResult,
 } from "@foxglove/studio-base/types/panels";
-import { colors } from "@foxglove/studio-base/util/sharedStyleConstants";
+import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    height: "100%",
-  },
-  container: {
-    padding: 16,
-    backgroundImage: `linear-gradient(to top, transparent, ${theme.palette.neutralLighterAlt} ${theme.spacing.s1})`,
-  },
-  item: {
-    cursor: "grab",
-  },
-  sticky: {
-    color: colors.LIGHT,
-    position: "sticky",
-    top: 0,
-    zIndex: 2,
-  },
-  searchInputContainer: {
-    paddingLeft: 8,
-    backgroundColor: theme.semanticColors.inputBackground,
-    borderRadius: 4,
-    border: `1px solid ${theme.semanticColors.inputBorder}`,
-  },
-  searchInput: {
-    backgroundColor: `${theme.semanticColors.inputBackground} !important`,
-    padding: "8px !important",
-    margin: "0 !important",
-    width: "100%",
-    minWidth: 0,
-
-    ":hover, :focus": {
-      backgroundColor: theme.semanticColors.inputBackground,
+const useStyles = makeStyles((theme: Theme) => {
+  return {
+    fullHeight: {
+      height: "100%",
     },
-  },
-  scrollContainer: {
-    overflowY: "auto",
-  },
-  noResults: {
-    padding: "8px 16px",
-    opacity: 0.4,
-  },
-}));
+    imagePlaceholder: {
+      paddingBottom: `${(200 / 280) * 100}%`,
+      backgroundColor: theme.palette.background.default,
+    },
+    searchInput: {
+      backgroundColor: "transparent !important",
+      padding: `${theme.spacing(1)} !important`,
+      margin: "0 !important",
+      width: "100%",
+      minWidth: 0,
+
+      "&:hover, :focus": {
+        backgroundColor: "transparent",
+      },
+    },
+    appBar: {
+      top: 0,
+      zIndex: 2,
+    },
+    appBarBackground: ({ backgroundColor }: { backgroundColor?: string }) => ({
+      backgroundImage: `linear-gradient(to top, transparent, ${
+        backgroundColor ?? theme.palette.background.default
+      } ${theme.spacing(1.5)}) !important`,
+    }),
+    toolbar: {
+      padding: theme.spacing(2),
+      justifyContent: "stretch",
+    },
+    inputWrapper: {
+      display: "flex",
+      flex: "auto",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingLeft: theme.spacing(1),
+      backgroundColor: theme.palette.background.default,
+      borderRadius: theme.shape.borderRadius,
+      border: `1px solid ${theme.palette.text.primary}`,
+
+      "&:focus-within": {
+        borderColor: theme.palette.primary.main,
+      },
+    },
+    cardContent: {
+      flex: "auto",
+    },
+    grab: {
+      cursor: "grab",
+    },
+    grid: {
+      display: "grid !important",
+      gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+      gap: theme.spacing(2),
+    },
+    noResults: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: theme.spacing(2, 1),
+      color: theme.palette.text.secondary,
+    },
+  };
+});
 
 type DropDescription = {
   type: string;
@@ -91,6 +131,7 @@ type DropDescription = {
 };
 
 type PanelItemProps = {
+  mode?: "grid" | "list";
   panel: {
     type: string;
     title: string;
@@ -108,17 +149,18 @@ type PanelItemProps = {
 };
 
 function DraggablePanelItem({
+  mode = "list",
   searchQuery,
   panel,
   onClick,
   onDrop,
-  checked,
-  highlighted,
+  checked = false,
+  highlighted = false,
   mosaicId,
 }: PanelItemProps) {
-  const classes = useStyles();
-  const scrollRef = React.useRef<HTMLDivElement>(ReactNull);
-  const [, drag] = useDrag<unknown, MosaicDropResult, never>({
+  const classes = useStyles({});
+  const scrollRef = React.useRef<HTMLElement>(ReactNull);
+  const [, connectDragSource] = useDrag<unknown, MosaicDropResult, never>({
     type: MosaicDragType.WINDOW,
     // mosaicId is needed for react-mosaic to accept the drop
     item: () => ({ mosaicId }),
@@ -140,7 +182,7 @@ function DraggablePanelItem({
   });
 
   React.useEffect(() => {
-    if (highlighted === true && scrollRef.current) {
+    if (highlighted && scrollRef.current) {
       const highlightedItem = scrollRef.current.getBoundingClientRect();
       const scrollContainer = scrollRef.current.parentElement?.parentElement?.parentElement;
       if (scrollContainer) {
@@ -152,47 +194,91 @@ function DraggablePanelItem({
           highlightedItem.top + 50 <= window.innerHeight;
 
         if (!isInView) {
-          scrollRef.current?.scrollIntoView();
+          scrollRef.current.scrollIntoView();
         }
       }
     }
   }, [highlighted]);
 
   const { ref: tooltipRef, tooltip } = useTooltip({
-    contents: (
-      <Stack width={200}>
-        {panel.thumbnail != undefined && <img src={panel.thumbnail} alt={panel.title} />}
-        <Stack padding={1} spacing={0.5}>
-          <Typography variant="body2" style={{ fontWeight: "bold" }}>
-            {panel.title}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {panel.description}
-          </Typography>
+    contents:
+      mode === "grid" ? (
+        panel.description
+      ) : (
+        <Stack width={200}>
+          {panel.thumbnail != undefined && <img src={panel.thumbnail} alt={panel.title} />}
+          <Stack padding={1} spacing={0.5}>
+            <Typography variant="body2" style={{ fontWeight: "bold" }}>
+              {panel.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {panel.description}
+            </Typography>
+          </Stack>
         </Stack>
-      </Stack>
-    ),
-    placement: "right",
+      ),
+    placement: mode === "grid" ? undefined : "right",
     delay: 200,
   });
-  return (
-    <div ref={drag}>
-      <div ref={tooltipRef}>
-        <div ref={scrollRef}>
-          {tooltip}
-          <Item
-            onClick={onClick}
-            checked={checked}
-            highlighted={highlighted}
-            className={classes.item}
-            dataTest={`panel-menu-item ${panel.title}`}
-          >
-            <TextHighlight targetStr={panel.title} searchText={searchQuery} />
-          </Item>
-        </div>
-      </div>
-    </div>
+  const mergedRef = useCallback(
+    (el: HTMLElement | ReactNull) => {
+      connectDragSource(el);
+      tooltipRef(el);
+      scrollRef.current = el;
+    },
+    [connectDragSource, tooltipRef, scrollRef],
   );
+  switch (mode) {
+    case "grid":
+      return (
+        <Card className={classes.fullHeight}>
+          <CardActionArea
+            component={Stack}
+            ref={mergedRef}
+            onClick={onClick}
+            className={classes.fullHeight}
+          >
+            {panel.thumbnail != undefined ? (
+              <CardMedia component="img" image={panel.thumbnail} alt={panel.title} />
+            ) : (
+              <div className={classes.imagePlaceholder} />
+            )}
+            <CardContent className={classes.cardContent}>
+              <Typography variant="subtitle2" gutterBottom>
+                <span data-test={`panel-menu-item ${panel.title}`}>
+                  <TextHighlight targetStr={panel.title} searchText={searchQuery} />
+                </span>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {panel.description}
+              </Typography>
+            </CardContent>
+          </CardActionArea>
+        </Card>
+      );
+
+    case "list":
+      return (
+        <ListItem disableGutters disablePadding selected={highlighted}>
+          {tooltip}
+          <ListItemButton
+            className={classes.grab}
+            disabled={checked}
+            ref={mergedRef}
+            onClick={onClick}
+          >
+            <ListItemText
+              primary={
+                <span data-test={`panel-menu-item ${panel.title}`}>
+                  <TextHighlight targetStr={panel.title} searchText={searchQuery} />
+                </span>
+              }
+              primaryTypographyProps={{ fontWeight: checked ? "bold" : undefined }}
+            />
+          </ListItemButton>
+        </ListItem>
+      );
+  }
 }
 
 export type PanelSelection = {
@@ -203,20 +289,22 @@ export type PanelSelection = {
   };
 };
 type Props = {
+  mode?: "grid" | "list";
   onPanelSelect: (arg0: PanelSelection) => void;
   selectedPanelTitle?: string;
+  backgroundColor?: string;
 };
 
 // sanity checks to help panel authors debug issues
 function verifyPanels(panels: readonly PanelInfo[]) {
   const panelTypes: Map<string, PanelInfo> = new Map();
   for (const panel of panels) {
-    const { title, type, config } = panel;
+    const { title, type, config } = mightActuallyBePartial(panel);
     const dispName = title ?? type ?? "<unnamed>";
-    if (type.length === 0) {
+    if (type == undefined || type.length === 0) {
       throw new Error(`Panel component ${title} must declare a unique \`static panelType\``);
     }
-    const existingPanel = panelTypes.get(type);
+    const existingPanel = mightActuallyBePartial(panelTypes.get(type));
     if (existingPanel) {
       const bothHaveEmptyConfigs = isEmpty(existingPanel.config) && isEmpty(config);
       if (bothHaveEmptyConfigs) {
@@ -231,11 +319,10 @@ function verifyPanels(panels: readonly PanelInfo[]) {
 }
 
 function PanelList(props: Props): JSX.Element {
-  const theme = useTheme();
-  const classes = useStyles();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [highlightedPanelIdx, setHighlightedPanelIdx] = React.useState<number | undefined>();
-  const { onPanelSelect, selectedPanelTitle } = props;
+  const { mode, onPanelSelect, selectedPanelTitle, backgroundColor } = props;
+  const classes = useStyles({ backgroundColor });
 
   const { dropPanel } = useCurrentLayoutActions();
   const mosaicId = usePanelMosaicId();
@@ -257,8 +344,12 @@ function PanelList(props: Props): JSX.Element {
   );
 
   const handleSearchChange = React.useCallback((e: React.SyntheticEvent<HTMLInputElement>) => {
-    setSearchQuery(e.currentTarget.value);
-    setHighlightedPanelIdx(0);
+    const query = e.currentTarget.value;
+    setSearchQuery(query);
+
+    // When there is a search query, automatically highlight the first (0th) item.
+    // When the user erases the query, remove the highlight.
+    setHighlightedPanelIdx(query ? 0 : undefined);
   }, []);
 
   const panelCatalog = usePanelCatalog();
@@ -311,11 +402,28 @@ function PanelList(props: Props): JSX.Element {
 
   const onKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "ArrowDown" && highlightedPanelIdx != undefined) {
-        setHighlightedPanelIdx((highlightedPanelIdx + 1) % allFilteredPanels.length);
-      } else if (e.key === "ArrowUp" && highlightedPanelIdx != undefined) {
-        const newIdx = (highlightedPanelIdx - 1) % (allFilteredPanels.length - 1);
-        setHighlightedPanelIdx(newIdx >= 0 ? newIdx : allFilteredPanels.length + newIdx);
+      if (mode === "grid") {
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        setHighlightedPanelIdx((existing) => {
+          if (existing == undefined) {
+            return 0;
+          }
+          return (existing + 1) % allFilteredPanels.length;
+        });
+      } else if (e.key === "ArrowUp") {
+        setHighlightedPanelIdx((existing) => {
+          // nothing to highlight if there are no entries
+          if (allFilteredPanels.length <= 0) {
+            return undefined;
+          }
+
+          if (existing == undefined) {
+            return allFilteredPanels.length - 1;
+          }
+          return (existing - 1 + allFilteredPanels.length) % allFilteredPanels.length;
+        });
       } else if (e.key === "Enter" && highlightedPanel) {
         onPanelSelect({
           type: highlightedPanel.type,
@@ -324,16 +432,18 @@ function PanelList(props: Props): JSX.Element {
         });
       }
     },
-    [allFilteredPanels.length, highlightedPanel, highlightedPanelIdx, onPanelSelect],
+    [allFilteredPanels.length, highlightedPanel, mode, onPanelSelect],
   );
 
   const displayPanelListItem = React.useCallback(
-    ({ title, type, description, config, relatedConfigs, thumbnail }: PanelInfo) => {
+    (panelInfo: PanelInfo) => {
+      const { title, type, config, relatedConfigs } = panelInfo;
       return (
         <DraggablePanelItem
+          mode={mode}
           key={`${type}-${title}`}
           mosaicId={mosaicId}
-          panel={{ type, title, description, config, relatedConfigs, thumbnail }}
+          panel={panelInfo}
           onDrop={onPanelMenuItemDrop}
           onClick={() => onPanelSelect({ type, config, relatedConfigs })}
           checked={title === selectedPanelTitle}
@@ -343,6 +453,7 @@ function PanelList(props: Props): JSX.Element {
       );
     },
     [
+      mode,
       highlightedPanel,
       mosaicId,
       onPanelMenuItemDrop,
@@ -353,13 +464,16 @@ function PanelList(props: Props): JSX.Element {
   );
 
   return (
-    <div className={classes.root}>
-      <div className={classes.sticky}>
-        <div className={classes.container}>
-          <Flex center className={classes.searchInputContainer}>
-            <Icon style={{ color: theme.semanticColors.inputIcon }}>
-              <MagnifyIcon />
-            </Icon>
+    <div className={classes.fullHeight}>
+      <AppBar
+        className={cx(classes.appBar, { [classes.appBarBackground]: !backgroundColor })}
+        position="sticky"
+        color="transparent"
+        elevation={0}
+      >
+        <Toolbar disableGutters className={classes.toolbar}>
+          <div className={classes.inputWrapper}>
+            <SearchIcon fontSize="small" color="primary" />
             <LegacyInput
               className={classes.searchInput}
               placeholder="Search panels"
@@ -367,16 +481,21 @@ function PanelList(props: Props): JSX.Element {
               onChange={handleSearchChange}
               onKeyDown={onKeyDown}
               onBlur={() => setHighlightedPanelIdx(undefined)}
-              onFocus={() => setHighlightedPanelIdx(0)}
               autoFocus
             />
-          </Flex>
-        </div>
-      </div>
-      <div className={classes.scrollContainer}>
-        {noResults && <div className={classes.noResults}>No panels match search criteria.</div>}
-        {allFilteredPanels.map(displayPanelListItem)}
-      </div>
+          </div>
+        </Toolbar>
+      </AppBar>
+      {mode === "grid" ? (
+        <Container className={classes.grid} maxWidth={false}>
+          {allFilteredPanels.map(displayPanelListItem)}
+        </Container>
+      ) : (
+        <List dense disablePadding>
+          {allFilteredPanels.map(displayPanelListItem)}
+        </List>
+      )}
+      {noResults && <div className={classes.noResults}>No panels match search criteria.</div>}
     </div>
   );
 }

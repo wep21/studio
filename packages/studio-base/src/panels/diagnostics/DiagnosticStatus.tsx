@@ -11,18 +11,19 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { makeStyles, useTheme } from "@fluentui/react";
+import { useTheme } from "@fluentui/react";
 import ChartLineVariantIcon from "@mdi/svg/svg/chart-line-variant.svg";
 import DotsHorizontalIcon from "@mdi/svg/svg/dots-horizontal.svg";
 import ChevronDownIcon from "@mdi/svg/svg/unfold-less-horizontal.svg";
 import ChevronUpIcon from "@mdi/svg/svg/unfold-more-horizontal.svg";
+import { Stack, Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import cx from "classnames";
 import { clamp } from "lodash";
 import { ReactElement, useCallback, useEffect, useRef, useState } from "react";
 import { createSelector } from "reselect";
 import sanitizeHtml from "sanitize-html";
 
-import Flex from "@foxglove/studio-base/components/Flex";
 import Icon from "@foxglove/studio-base/components/Icon";
 import Tooltip from "@foxglove/studio-base/components/Tooltip";
 import { openSiblingPlotPanel } from "@foxglove/studio-base/panels/Plot";
@@ -44,95 +45,6 @@ type Props = {
   collapsedSections: { name: string; section: string }[];
   saveConfig: (arg0: Partial<Config>) => void;
 };
-
-const useStyles = makeStyles((theme) => ({
-  table: {
-    tableLayout: "fixed",
-    width: "100%",
-    lineHeight: "1.3em",
-    whiteSpace: "pre-line",
-    overflowWrap: "break-word",
-    textAlign: "left",
-    border: "none",
-
-    td: {
-      border: "none",
-      padding: "1px 3px",
-    },
-    "td, th": {
-      lineHeight: "1.3em",
-    },
-  },
-  name: {
-    fontWeight: "bold",
-  },
-  sectionHeader: {
-    color: colors.HIGHLIGHT,
-    textAlign: "center !important",
-    fontSize: "1.2em",
-    padding: 4,
-    cursor: "pointer",
-    border: "none",
-  },
-
-  // Status classes
-  ok: { color: `${theme.semanticColors.successIcon} !important` },
-  warn: { color: `${theme.semanticColors.warningBackground} !important` },
-  error: { color: `${theme.semanticColors.errorBackground} !important` },
-  stale: { color: `${theme.semanticColors.infoIcon} !important` },
-  unknown: { color: `${theme.semanticColors.errorBackground} !important` },
-
-  collapsedSection: {
-    textAlign: "center",
-    color: theme.semanticColors.errorBackground,
-  },
-  interactiveRow: {
-    cursor: "pointer",
-
-    ":nth-child(odd)": {
-      backgroundColor: theme.palette.neutralLighterAlt,
-    },
-    ":hover": {
-      backgroundColor: theme.palette.neutralLighter,
-
-      ".icon": {
-        visibility: "visible",
-      },
-    },
-  },
-  icon: {
-    color: theme.palette.themePrimary,
-    marginLeft: 4,
-    visibility: "hidden",
-
-    "> svg": {
-      verticalAlign: -2,
-    },
-  },
-  resizeHandle: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 12,
-    marginLeft: -6,
-    cursor: "col-resize",
-
-    ":hover, :active, :focus": {
-      outline: "none",
-
-      "::after": {
-        content: '""',
-        position: "absolute",
-        top: 0,
-        bottom: 0,
-        left: 6,
-        marginLeft: -2,
-        width: 4,
-        backgroundColor: "rgba(127, 127, 127, 0.4)",
-      },
-    },
-  },
-}));
 
 type FormattedKeyValue = {
   key: string;
@@ -170,6 +82,96 @@ function sanitize(value: string): { __html: string } {
     }),
   };
 }
+
+const useStyles = makeStyles((theme: Theme) => ({
+  table: {
+    tableLayout: "fixed",
+    width: "100%",
+    lineHeight: "1.3em",
+    whiteSpace: "pre-line",
+    overflowWrap: "break-word",
+    textAlign: "left",
+    border: "none",
+
+    "& td": {
+      lineHeight: "1.3em",
+      border: "none",
+      padding: "1px 3px",
+    },
+    "& th": {
+      lineHeight: "1.3em",
+      padding: "1px 3px",
+    },
+  },
+  name: {
+    fontWeight: "bold",
+  },
+  sectionHeader: {
+    color: colors.HIGHLIGHT,
+    textAlign: "center",
+    fontSize: "1.2em",
+    padding: 4,
+    cursor: "pointer",
+    border: "none",
+  },
+  // // Status classes
+  ok: { color: `${theme.palette.success.main} !important` },
+  warn: { color: `${theme.palette.warning.main} !important` },
+  error: { color: `${theme.palette.error.main} !important` },
+  stale: { color: `${theme.palette.info.main} !important` },
+  unknown: { color: `${theme.palette.error.main} !important` },
+
+  collapsedSection: {
+    textAlign: "center",
+    color: theme.palette.error.main,
+  },
+  interactiveRow: {
+    cursor: "pointer",
+
+    "&:nth-child(odd)": {
+      backgroundColor: theme.palette.grey[50],
+    },
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+
+      "& .icon": {
+        visibility: "visible",
+      },
+    },
+  },
+  icon: {
+    color: theme.palette.primary.main,
+    marginLeft: 4,
+    visibility: "hidden",
+
+    "& > svg": {
+      verticalAlign: -2,
+    },
+  },
+  resizeHandle: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 12,
+    marginLeft: -6,
+    cursor: "col-resize",
+
+    "&:hover, &:active, &:focus": {
+      outline: "none",
+
+      "&::after": {
+        content: '""',
+        position: "absolute",
+        top: 0,
+        bottom: 0,
+        left: 6,
+        marginLeft: -2,
+        width: 4,
+        backgroundColor: "rgba(127, 127, 127, 0.4)",
+      },
+    },
+  },
+}));
 
 // preliminary check to avoid expensive operations when there is no html
 const HAS_ANY_HTML = new RegExp(`<(${allowedTags.join("|")})`);
@@ -434,7 +436,7 @@ export default function DiagnosticStatus(props: Props): JSX.Element {
           </tr>
           <tr className={cx(classes.interactiveRow, statusClass)}>
             <td colSpan={2}>
-              <Flex style={{ justifyContent: "space-between" }}>
+              <Stack direction="row" flex="auto" justifyContent="space-between">
                 <div>
                   {info.status.message}{" "}
                   <Icon
@@ -474,7 +476,7 @@ export default function DiagnosticStatus(props: Props): JSX.Element {
                     </Icon>
                   </div>
                 )}
-              </Flex>
+              </Stack>
             </td>
           </tr>
           {renderKeyValueSections()}

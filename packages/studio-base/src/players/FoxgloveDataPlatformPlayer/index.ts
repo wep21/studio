@@ -3,12 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import { captureException } from "@sentry/core";
+import { isEqual, partition, uniq } from "lodash";
 import { v4 as uuidv4 } from "uuid";
 
+import { signal, Signal } from "@foxglove/den/async";
 import Logger from "@foxglove/log";
-import { parse as parseMessageDefinition } from "@foxglove/rosmsg";
-import { LazyMessageReader } from "@foxglove/rosmsg-serialization";
-import { MessageReader as ROS2MessageReader } from "@foxglove/rosmsg2-serialization";
+import { parseChannel } from "@foxglove/mcap-support";
 import {
   add,
   areEqual,
@@ -37,17 +37,17 @@ import {
   Progress,
   PublishPayload,
   SubscribePayload,
+  SubscriptionPreloadType,
   Topic,
 } from "@foxglove/studio-base/players/types";
 import ConsoleApi from "@foxglove/studio-base/services/ConsoleApi";
 import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
 import debouncePromise from "@foxglove/studio-base/util/debouncePromise";
-import signal, { Signal } from "@foxglove/studio-base/util/signal";
 import { formatTimeRaw } from "@foxglove/studio-base/util/time";
 
 import MessageMemoryCache from "./MessageMemoryCache";
 import collateMessageStream from "./collateMessageStream";
-import streamMessages from "./streamMessages";
+import streamMessages, { ParsedChannelAndEncodings } from "./streamMessages";
 
 const log = Logger.getLogger(__filename);
 
@@ -64,8 +64,6 @@ type FoxgloveDataPlatformPlayerOpts = {
   metricsCollector: PlayerMetricsCollectorInterface;
 };
 
-const ZERO_TIME = Object.freeze({ sec: 0, nsec: 0 });
-
 export default class FoxgloveDataPlatformPlayer implements Player {
   private readonly _preloadThresholdSecs = 5;
   private readonly _preloadDurationSecs = 15;
@@ -74,7 +72,10 @@ export default class FoxgloveDataPlatformPlayer implements Player {
   private _name: string;
   private _listener?: (arg0: PlayerState) => Promise<void>; // Listener for _emitState()
   private _totalBytesReceived = 0;
-  private _initialized: { preloadedMessages: MessageMemoryCache } | undefined;
+  private _caches: Partial<Record<SubscriptionPreloadType, MessageMemoryCache>> = {
+    full: undefined,
+    partial: undefined,
+  };
   private _closed = false; // Whether the player has been completely closed using close()
   private _isPlaying = false;
   private _speed = 1;
@@ -85,11 +86,17 @@ export default class FoxgloveDataPlatformPlayer implements Player {
   private _currentTime: Time;
   private _lastSeekTime?: number;
   private _topics: Topic[] = [];
+  private _subscriptions: Record<SubscriptionPreloadType, SubscribePayload[]> = {
+    full: [],
+    partial: [],
+  };
   private _datatypes: RosDatatypes = new Map();
   private _metricsCollector: PlayerMetricsCollectorInterface;
   private _presence: PlayerPresence = PlayerPresence.INITIALIZING;
-  private _currentPreloadTask?: AbortController;
-  private _requestedTopics: string[] = [];
+  private _currentPreloadTasks: Record<SubscriptionPreloadType, undefined | AbortController> = {
+    full: undefined,
+    partial: undefined,
+  };
   private _progress: Progress = {};
   private _loadedMoreMessages?: Signal<void>;
   private _nextFrame: MessageEvent<unknown>[] = [];
@@ -99,10 +106,7 @@ export default class FoxgloveDataPlatformPlayer implements Player {
    * Although each topic is usually homogeneous, technically it is possible to have different
    * encoding or schema for each topic, so we store all the ones we've seen.
    */
-  private _messageReadersByTopic = new Map<
-    string,
-    { encoding: string; schema: string; reader: ROS2MessageReader | LazyMessageReader }[]
-  >();
+  private _parsedChannelsByTopic = new Map<string, ParsedChannelAndEncodings[]>();
 
   // track issues within the player
   private _problems: PlayerProblem[] = [];
@@ -170,65 +174,63 @@ export default class FoxgloveDataPlatformPlayer implements Player {
     if (isLessThan(this._start, coverageStart)) {
       log.debug("Reduced start time from", this._start, "to", coverageStart);
       this._start = coverageStart;
-      this._currentTime = this._start;
     }
     if (isGreaterThan(this._end, coverageEnd)) {
       log.debug("Reduced end time from", this._end, "to", coverageEnd);
       this._end = coverageEnd;
     }
 
+    // During startup, seekPlayback might get called to set the currentTime. This might change the
+    // currentTime from the initial value set in the constructor. So we clamp the currentTime to the
+    // new start/end range in the event.
+    this._currentTime = clampTime(this._currentTime, this._start, this._end);
+
     const topics: Topic[] = [];
     const datatypes: RosDatatypes = new Map();
-    for (const { topic, encoding, schema, schemaName } of rawTopics) {
+    rawTopics: for (const rawTopic of rawTopics) {
+      const { topic, encoding: messageEncoding, schemaEncoding, schema, schemaName } = rawTopic;
       if (schema == undefined) {
         throw new Error(`missing requested schema for ${topic}`);
       }
-      if (encoding !== "ros1" && encoding !== "ros2") {
-        throw new Error(`Unsupported encoding for ${topic}: ${encoding}`);
+
+      let parsedChannels = this._parsedChannelsByTopic.get(topic);
+      if (!parsedChannels) {
+        parsedChannels = [];
+        this._parsedChannelsByTopic.set(topic, parsedChannels);
+      }
+      for (const info of parsedChannels) {
+        if (
+          info.messageEncoding === messageEncoding &&
+          info.schemaEncoding === schemaEncoding &&
+          isEqual(info.schema, schema)
+        ) {
+          continue rawTopics;
+        }
       }
 
-      topics.push({ name: topic, datatype: schemaName });
-
-      const parsedDefinitions = parseMessageDefinition(schema, { ros2: encoding === "ros2" });
-      parsedDefinitions.forEach(({ name, definitions }, index) => {
-        // The first definition usually doesn't have an explicit name,
-        // so we get the name from the datatype.
-        if (index === 0) {
-          datatypes.set(schemaName, { name: schemaName, definitions });
-        } else if (name != undefined) {
-          datatypes.set(name, { name, definitions });
-        }
+      const parsedChannel = parseChannel({
+        messageEncoding,
+        schema: { name: schemaName, data: schema, encoding: schemaEncoding },
       });
 
-      let readers = this._messageReadersByTopic.get(topic);
-      if (!readers) {
-        readers = [];
-        this._messageReadersByTopic.set(topic, readers);
-      }
-      for (const reader of readers) {
-        if (reader.encoding === encoding && reader.schema === schema) {
-          continue;
-        }
-      }
-      switch (encoding) {
-        case "ros1":
-          readers.push({ encoding, schema, reader: new LazyMessageReader(parsedDefinitions) });
-          break;
-        case "ros2":
-          readers.push({ encoding, schema, reader: new ROS2MessageReader(parsedDefinitions) });
-          break;
+      topics.push({ name: topic, datatype: parsedChannel.fullSchemaName });
+      parsedChannels.push({ messageEncoding, schemaEncoding, schema, parsedChannel });
+
+      // Final datatypes is an unholy union of schemas across all channels
+      for (const [name, datatype] of parsedChannel.datatypes) {
+        datatypes.set(name, datatype);
       }
     }
     this._topics = topics;
     this._datatypes = datatypes;
 
     this._presence = PlayerPresence.PRESENT;
-    this._initialized = {
-      preloadedMessages: new MessageMemoryCache({ start: this._start, end: this._end }),
-    };
+    this._caches.full = new MessageMemoryCache({ start: this._start, end: this._end });
+    this._caches.partial = new MessageMemoryCache({ start: this._start, end: this._end });
     this._metricsCollector.initialized();
     this._emitState();
-    this._startPreloadTaskIfNeeded();
+    this._startPreloadTaskIfNeeded("full");
+    this._startPreloadTaskIfNeeded("partial");
   };
 
   private _addProblem(
@@ -263,8 +265,8 @@ export default class FoxgloveDataPlatformPlayer implements Player {
       playerId: this._id,
       problems: this._problems,
       urlState: {
-        start: toRFC3339String(this._start ?? ZERO_TIME),
-        end: toRFC3339String(this._end ?? ZERO_TIME),
+        start: toRFC3339String(this._start),
+        end: toRFC3339String(this._end),
         deviceId: this._deviceId,
       },
 
@@ -272,8 +274,8 @@ export default class FoxgloveDataPlatformPlayer implements Player {
         messages,
         totalBytesReceived: this._totalBytesReceived,
         messageOrder: "receiveTime",
-        startTime: this._start ?? ZERO_TIME,
-        endTime: this._end ?? ZERO_TIME,
+        startTime: this._start,
+        endTime: this._end,
         currentTime: this._currentTime,
         isPlaying: this._isPlaying,
         speed: this._speed,
@@ -297,21 +299,26 @@ export default class FoxgloveDataPlatformPlayer implements Player {
   close(): void {
     this._closed = true;
     this._metricsCollector.close();
-    this._currentPreloadTask?.abort();
-    this._currentPreloadTask = undefined;
+    this._currentPreloadTasks.full?.abort();
+    this._currentPreloadTasks.partial?.abort();
+    this._currentPreloadTasks = { full: undefined, partial: undefined };
     this._totalBytesReceived = 0;
   }
 
   setSubscriptions(subscriptions: SubscribePayload[]): void {
     log.debug("setSubscriptions", subscriptions);
-    this._requestedTopics = Array.from(new Set(subscriptions.map(({ topic }) => topic)));
+    [this._subscriptions.full, this._subscriptions.partial] = partition(
+      subscriptions,
+      (s) => s.preloadType === "full",
+    );
     this._clearPreloadedData();
-    this._startPreloadTaskIfNeeded();
+    this._startPreloadTaskIfNeeded("full");
+    this._startPreloadTaskIfNeeded("partial");
     this._emitState();
   }
 
   private _runPlaybackLoop = debouncePromise(async () => {
-    if (!this._initialized) {
+    if (!this._caches.partial) {
       return;
     }
     let lastTickEndTime: number | undefined;
@@ -336,24 +343,28 @@ export default class FoxgloveDataPlatformPlayer implements Player {
       const lastSeekTime = this._lastSeekTime;
       const startTime = this._currentTime;
       const endTime = clampTime(add(startTime, fromMillis(readMs)), this._start, this._end);
-      this._startPreloadTaskIfNeeded();
-      let messages;
-      while (
-        !(messages = this._initialized.preloadedMessages.getMessages({
-          start: startTime,
-          end: endTime,
-        }))
-      ) {
-        log.debug("Waiting for more messages");
-        // Wait for new messages to be loaded
-        await (this._loadedMoreMessages = signal());
-        if (this._lastSeekTime !== lastSeekTime) {
-          lastTickEndTime = undefined;
-          continue mainLoop;
+      if (this._subscriptions.partial.length > 0) {
+        this._startPreloadTaskIfNeeded("partial");
+        let messages;
+        while (
+          !(messages = this._caches.partial.getMessages({
+            start: startTime,
+            end: endTime,
+          }))
+        ) {
+          log.debug("Waiting for more messages");
+          // Wait for new messages to be loaded
+          await (this._loadedMoreMessages = signal());
+          if (this._lastSeekTime !== lastSeekTime) {
+            lastTickEndTime = undefined;
+            continue mainLoop;
+          }
         }
+        lastTickEndTime = performance.now();
+        this._nextFrame = messages;
+      } else {
+        this._nextFrame = [];
       }
-      lastTickEndTime = performance.now();
-      this._nextFrame = messages;
       this._currentTime = endTime;
       if (areEqual(this._currentTime, this._end)) {
         this._isPlaying = false;
@@ -363,28 +374,40 @@ export default class FoxgloveDataPlatformPlayer implements Player {
   });
 
   private _clearPreloadedData() {
-    if (this._initialized) {
-      this._initialized.preloadedMessages.clear();
-      this._progress = {
-        fullyLoadedFractionRanges: this._initialized.preloadedMessages.fullyLoadedFractionRanges(),
-      };
-    }
-    this._currentPreloadTask?.abort();
-    this._currentPreloadTask = undefined;
+    this._currentPreloadTasks.full?.abort();
+    this._currentPreloadTasks.partial?.abort();
+    this._currentPreloadTasks = { full: undefined, partial: undefined };
+
+    this._caches.full?.clear();
+    this._caches.partial?.clear();
+    this._updateProgress();
   }
 
-  private _startPreloadTaskIfNeeded() {
-    if (!this._initialized || this._closed) {
+  private _startPreloadTaskIfNeeded(preloadType: SubscriptionPreloadType) {
+    const preloadedMessages = this._caches[preloadType];
+
+    if (!preloadedMessages || this._closed) {
       return;
     }
-    if (this._currentPreloadTask) {
+
+    if (this._currentPreloadTasks[preloadType]) {
       return;
     }
-    const preloadedMessages = this._initialized.preloadedMessages;
-    const nextRangeToLoad = preloadedMessages.nextRangeToLoad(this._currentTime);
+
+    const topics = uniq(this._subscriptions[preloadType].map((s) => s.topic));
+    if (topics.length === 0) {
+      return;
+    }
+
+    const nextRangeToLoad = preloadedMessages.nextRangeToLoad(
+      preloadType === "full" ? this._start : this._currentTime,
+    );
+    if (nextRangeToLoad == undefined) {
+      return;
+    }
+
     const shouldPreload =
-      this._requestedTopics.length > 0 &&
-      nextRangeToLoad != undefined &&
+      preloadType === "full" ||
       toSec(subtract(nextRangeToLoad.start, this._currentTime)) < this._preloadThresholdSecs;
     if (!shouldPreload) {
       return;
@@ -392,7 +415,7 @@ export default class FoxgloveDataPlatformPlayer implements Player {
 
     const startTime = nextRangeToLoad.start;
     const endTime = clampTime(
-      add(startTime, fromSec(this._preloadDurationSecs)),
+      preloadType === "full" ? this._end : add(startTime, fromSec(this._preloadDurationSecs)),
       this._start,
       nextRangeToLoad.end,
     );
@@ -404,18 +427,19 @@ export default class FoxgloveDataPlatformPlayer implements Player {
     thisTask.signal.addEventListener("abort", () => {
       log.debug("Aborting preload task", startTime, endTime);
     });
-    this._currentPreloadTask = thisTask;
+    this._currentPreloadTasks[preloadType] = thisTask;
     log.debug("Starting preload task", startTime, endTime);
+
     (async () => {
       const stream = streamMessages({
         api: this._consoleApi,
         signal: thisTask.signal,
-        messageReadersByTopic: this._messageReadersByTopic,
+        parsedChannelsByTopic: this._parsedChannelsByTopic,
         params: {
           deviceId: this._deviceId,
           start: startTime,
           end: endTime,
-          topics: this._requestedTopics,
+          topics,
         },
       });
 
@@ -428,11 +452,11 @@ export default class FoxgloveDataPlatformPlayer implements Player {
         }
         log.debug("Adding preloaded chunk in", range, "with", messages.length, "messages");
         preloadedMessages.insert(range, messages);
-        this._progress = {
-          fullyLoadedFractionRanges: preloadedMessages.fullyLoadedFractionRanges(),
-        };
-        this._loadedMoreMessages?.resolve();
-        this._loadedMoreMessages = undefined;
+        this._updateProgress();
+        if (preloadType === "partial") {
+          this._loadedMoreMessages?.resolve();
+          this._loadedMoreMessages = undefined;
+        }
         this._emitState();
       }
     })()
@@ -445,12 +469,23 @@ export default class FoxgloveDataPlatformPlayer implements Player {
         this._addProblem("stream-error", { message: error.message, error, severity: "error" });
       })
       .finally(() => {
-        if (this._currentPreloadTask === thisTask) {
-          this._currentPreloadTask = undefined;
+        if (this._currentPreloadTasks[preloadType] === thisTask) {
+          this._currentPreloadTasks[preloadType] = undefined;
         }
       });
 
     this._emitState();
+  }
+
+  private _updateProgress() {
+    const noFullTopics = this._subscriptions.full.length === 0;
+    const cache = noFullTopics ? this._caches.partial : this._caches.full;
+    if (cache) {
+      this._progress = {
+        fullyLoadedFractionRanges: cache.fullyLoadedFractionRanges(),
+        messageCache: cache.getBlockCache(),
+      };
+    }
   }
 
   setPublishers(publishers: AdvertiseOptions[]): void {
@@ -487,12 +522,13 @@ export default class FoxgloveDataPlatformPlayer implements Player {
 
   seekPlayback(time: Time, _backfillDuration?: Time): void {
     log.debug("Seek", time);
-    this._currentTime = time;
+    this._currentTime = clampTime(time, this._start, this._end);
     this._lastSeekTime = Date.now();
     this._nextFrame = [];
-    this._currentPreloadTask?.abort();
-    this._currentPreloadTask = undefined;
-    this._startPreloadTaskIfNeeded();
+    this._currentPreloadTasks.full?.abort();
+    this._currentPreloadTasks.partial?.abort();
+    this._currentPreloadTasks = { full: undefined, partial: undefined };
+    this._startPreloadTaskIfNeeded("partial");
     this._emitState();
   }
 

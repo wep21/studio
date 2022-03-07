@@ -15,10 +15,18 @@ import ArrowLeftBoldIcon from "@mdi/svg/svg/arrow-left-bold.svg";
 import DeleteIcon from "@mdi/svg/svg/delete.svg";
 import FileMultipleIcon from "@mdi/svg/svg/file-multiple.svg";
 import HelpCircleIcon from "@mdi/svg/svg/help-circle.svg";
+import {
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Stack,
+  IconButton,
+  ListSubheader,
+} from "@mui/material";
 import * as monacoApi from "monaco-editor/esm/vs/editor/editor.api";
 import styled from "styled-components";
 
-import Flex from "@foxglove/studio-base/components/Flex";
 import Icon from "@foxglove/studio-base/components/Icon";
 import { Explorer } from "@foxglove/studio-base/panels/NodePlayground";
 import TemplateIcon from "@foxglove/studio-base/panels/NodePlayground/assets/file-document-edit.svg";
@@ -34,60 +42,18 @@ const MenuWrapper = styled.div`
   flex-direction: column;
   align-items: center;
   width: 40px;
-  background-color: ${colors.DARK1};
+  background-color: ${({ theme }) => theme.palette.neutralLighterAlt};
   & > * {
     margin: 10px;
   }
 `;
 
-const ExplorerWrapper = styled.div<{ useThemeColors: boolean; show: boolean }>`
+const ExplorerWrapper = styled.div<{ show: boolean }>`
   display: ${({ show }: { show: boolean }) => (show ? "initial" : "none")};
-  background-color: ${({ useThemeColors, theme }) =>
-    useThemeColors ? theme.palette.neutralLighterAlt : colors.GRAY2};
+  background-color: ${({ theme }) => theme.palette.neutralLighterAlt};
   max-width: 325px;
   min-width: 275px;
   overflow: auto;
-`;
-
-const ListItem = styled.li`
-  padding: 5px;
-  cursor: pointer;
-  display: flex;
-  font-size: 14px;
-  justify-content: space-between;
-  word-break: break-all;
-  align-items: center;
-  color: ${colors.LIGHT1};
-  background-color: ${({ selected }: { selected: boolean }) =>
-    selected ? colors.DARK9 : "transparent"};
-  > span {
-    opacity: 0;
-  }
-  &:hover {
-    background-color: ${colors.DARK9};
-    span {
-      opacity: 1;
-    }
-  }
-`;
-
-const TemplateItem = styled.li`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 5px;
-  cursor: pointer;
-  display: flex;
-  font-size: 14px;
-  word-break: break-all;
-  > span {
-    display: block;
-    margin: 3px 0;
-  }
-  color: ${colors.LIGHT1};
-  &:hover {
-    background-color: ${colors.DARK9};
-  }
 `;
 
 type NodesListProps = {
@@ -100,23 +66,29 @@ type NodesListProps = {
 
 const NodesList = ({ nodes, selectNode, deleteNode, collapse, selectedNodeId }: NodesListProps) => {
   return (
-    <Flex col>
+    <Stack flex="auto">
       <SidebarTitle title="Nodes" collapse={collapse} />
-      {Object.keys(nodes).map((nodeId) => {
-        return (
-          <ListItem
-            key={nodeId}
-            selected={selectedNodeId === nodeId}
-            onClick={() => selectNode(nodeId)}
-          >
-            {nodes[nodeId]?.name}
-            <Icon onClick={() => deleteNode(nodeId)} size="medium">
-              <DeleteIcon />
-            </Icon>
-          </ListItem>
-        );
-      })}
-    </Flex>
+      <List>
+        {Object.keys(nodes).map((nodeId) => {
+          return (
+            <ListItem
+              disablePadding
+              key={nodeId}
+              selected={selectedNodeId === nodeId}
+              secondaryAction={
+                <IconButton onClick={() => deleteNode(nodeId)} edge="end" aria-label="delete">
+                  <DeleteIcon />
+                </IconButton>
+              }
+            >
+              <ListItemButton onClick={() => selectNode(nodeId)}>
+                <ListItemText primary={nodes[nodeId]?.name} />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
+      </List>
+    </Stack>
   );
 };
 
@@ -143,19 +115,19 @@ const SidebarTitle = ({
   tooltip?: string;
   collapse: () => void;
 }) => (
-  <Flex row style={{ alignItems: "center", color: colors.DARK9, padding: "5px" }}>
+  <Stack direction="row" alignItems="center" color={colors.DARK9} padding={0.625}>
     <h3>{title}</h3>
     {tooltip && (
       <Icon style={{ cursor: "unset", marginLeft: "5px" }} size="xsmall" tooltip={tooltip}>
         <HelpCircleIcon />
       </Icon>
     )}
-    <div style={{ display: "flex", justifyContent: "flex-end", flexGrow: 1 }}>
+    <Stack direction="row" justifyContent="flex-end" flex="auto">
       <Icon onClick={collapse} size="medium" tooltip={"collapse"}>
         <ArrowLeftBoldIcon />
       </Icon>
-    </div>
-  </Flex>
+    </Stack>
+  </Stack>
 );
 
 const Sidebar = ({
@@ -205,37 +177,58 @@ const Sidebar = ({
         />
       ),
       utils: (
-        <Flex col style={{ position: "relative" }}>
+        <Stack flex="auto" position="relative">
           <SidebarTitle
             collapse={() => updateExplorer(undefined)}
             title="Utilities"
             tooltip={`You can import any of these modules into your node using the following syntax: 'import { .. } from "./pointClouds.ts".\n\nWant to contribute? Scroll to the bottom of the docs for details!`}
           />
-          {utilityFiles.map(({ fileName, filePath }) => (
+          <List>
+            {utilityFiles.map(({ fileName, filePath }) => (
+              <ListItem
+                disablePadding
+                key={filePath}
+                onClick={gotoUtils.bind(undefined, filePath)}
+                selected={script ? filePath === script.filePath : false}
+              >
+                <ListItemButton>
+                  <ListItemText primary={fileName} />
+                </ListItemButton>
+              </ListItem>
+            ))}
             <ListItem
-              key={filePath}
-              onClick={gotoUtils.bind(undefined, filePath)}
-              selected={script ? filePath === script.filePath : false}
+              disablePadding
+              onClick={gotoUtils.bind(undefined, "/studio_node/generatedTypes.ts")}
+              selected={script ? script.filePath === "/studio_node/generatedTypes.ts" : false}
             >
-              {fileName}
+              <ListItemButton>
+                <ListItemText primary="generatedTypes.ts" />
+              </ListItemButton>
             </ListItem>
-          ))}
-        </Flex>
+          </List>
+        </Stack>
       ),
       templates: (
-        <Flex col>
+        <Stack flex="auto">
           <SidebarTitle
             title="Templates"
             tooltip={"Create nodes from these templates"}
             collapse={() => updateExplorer(undefined)}
           />
-          {templates.map(({ name, description, template }, i) => (
-            <TemplateItem key={`${name}-${i}`} onClick={() => addNewNode(template)}>
-              <span style={{ fontWeight: "bold" }}>{name}</span>
-              <span>{description}</span>
-            </TemplateItem>
-          ))}
-        </Flex>
+          <List
+            subheader={
+              <ListSubheader component="div">Click a template to create a new node.</ListSubheader>
+            }
+          >
+            {templates.map(({ name, description, template }) => (
+              <ListItem disablePadding key={name} onClick={() => addNewNode(template)}>
+                <ListItemButton>
+                  <ListItemText primary={name} secondary={description} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Stack>
       ),
     }),
     [
@@ -281,7 +274,7 @@ const Sidebar = ({
           <TemplateIcon />
         </Icon>
       </MenuWrapper>
-      <ExplorerWrapper useThemeColors={false} show={explorer != undefined}>
+      <ExplorerWrapper show={explorer != undefined}>
         {explorer != undefined && explorers[explorer]}
       </ExplorerWrapper>
     </>

@@ -11,23 +11,24 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { mergeStyleSets, useTheme } from "@fluentui/react";
+import { useTheme } from "@fluentui/react";
 import CheckboxBlankOutlineIcon from "@mdi/svg/svg/checkbox-blank-outline.svg";
 import CheckboxMarkedIcon from "@mdi/svg/svg/checkbox-marked.svg";
 import PlusMinusIcon from "@mdi/svg/svg/plus-minus.svg";
 import LessIcon from "@mdi/svg/svg/unfold-less-horizontal.svg";
 import MoreIcon from "@mdi/svg/svg/unfold-more-horizontal.svg";
+import { Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 // eslint-disable-next-line no-restricted-imports
 import { first, isEqual, get, last } from "lodash";
 import { useState, useCallback, useMemo } from "react";
 import ReactHoverObserver from "react-hover-observer";
 import Tree from "react-json-tree";
 
-import { useDataSourceInfo, useMessagesByTopic } from "@foxglove/studio-base/PanelAPI";
+import { useDataSourceInfo } from "@foxglove/studio-base/PanelAPI";
 import Dropdown from "@foxglove/studio-base/components/Dropdown";
 import DropdownItem from "@foxglove/studio-base/components/Dropdown/DropdownItem";
 import EmptyState from "@foxglove/studio-base/components/EmptyState";
-import Flex from "@foxglove/studio-base/components/Flex";
 import Icon from "@foxglove/studio-base/components/Icon";
 import useGetItemStringWithTimezone from "@foxglove/studio-base/components/JsonTree/useGetItemStringWithTimezone";
 import MessagePathInput from "@foxglove/studio-base/components/MessagePathSyntax/MessagePathInput";
@@ -40,11 +41,8 @@ import {
   traverseStructure,
 } from "@foxglove/studio-base/components/MessagePathSyntax/messagePathsForDatatype";
 import parseRosPath from "@foxglove/studio-base/components/MessagePathSyntax/parseRosPath";
-import {
-  useCachedGetMessagePathDataItems,
-  MessagePathDataItem,
-} from "@foxglove/studio-base/components/MessagePathSyntax/useCachedGetMessagePathDataItems";
-import { useLatestMessageDataItem } from "@foxglove/studio-base/components/MessagePathSyntax/useLatestMessageDataItem";
+import { MessagePathDataItem } from "@foxglove/studio-base/components/MessagePathSyntax/useCachedGetMessagePathDataItems";
+import { useMessageDataItem } from "@foxglove/studio-base/components/MessagePathSyntax/useMessageDataItem";
 import Panel from "@foxglove/studio-base/components/Panel";
 import { usePanelContext } from "@foxglove/studio-base/components/PanelContext";
 import PanelToolbar from "@foxglove/studio-base/components/PanelToolbar";
@@ -82,6 +80,7 @@ export type RawMessagesConfig = {
 };
 
 type Props = {
+  defaultExpandAll?: boolean;
   config: RawMessagesConfig;
   saveConfig: (arg0: Partial<RawMessagesConfig>) => void;
 };
@@ -105,11 +104,26 @@ function maybeDeepParse(val: unknown) {
   return val;
 }
 
-const classes = mergeStyleSets({
-  container: {
-    paddingLeft: "0.5em",
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    display: "flex",
+    flexDirection: "column",
+    flex: "auto",
+    overflow: "hidden",
+    position: "relative",
+  },
+  topic: {
+    display: "flex",
+    flexDirection: "column",
+    flex: "auto",
+    overflow: "hidden auto",
+    paddingLeft: theme.spacing(0.75),
     fontFamily: fonts.SANS_SERIF,
     fontFeatureSettings: `${fonts.SANS_SERIF_FEATURE_SETTINGS}, "zero"`,
+  },
+  diff: {
+    display: "flex",
+    flex: "auto",
   },
   iconWrapper: {
     display: "inline",
@@ -125,10 +139,15 @@ const classes = mergeStyleSets({
     width: "100%",
     lineHeight: "20px",
   },
-});
+  invisibleSpace: {
+    // https://stackoverflow.com/questions/62319014/make-text-selection-treat-adjacent-elements-as-separate-words
+    fontSize: 0,
+  },
+}));
 
 function RawMessages(props: Props) {
   const theme = useTheme();
+  const classes = useStyles();
   const jsonTreeTheme = useJsonTreeTheme();
   const { config, saveConfig } = props;
   const { openSiblingPanel } = usePanelContext();
@@ -161,25 +180,15 @@ function RawMessages(props: Props) {
   }, [datatypes, topic, topicRosPath]);
 
   // When expandAll is unset, we'll use expandedFields to get expanded info
-  const [expandAll, setExpandAll] = useState<boolean | undefined>(false);
+  const [expandAll, setExpandAll] = useState<boolean | undefined>(props.defaultExpandAll ?? false);
   const [expandedFields, setExpandedFields] = useState(() => new Set());
 
-  const topicName = topicRosPath?.topicName ?? "";
-  const consecutiveMsgs = useMessagesByTopic({
-    topics: [topicName],
-    historySize: 2,
-  })[topicName];
-  const cachedGetMessagePathDataItems = useCachedGetMessagePathDataItems([topicPath]);
-  const prevTickMsg = consecutiveMsgs?.[consecutiveMsgs.length - 2];
-  const [prevTickObj, currTickObj] = [
-    prevTickMsg && {
-      messageEvent: prevTickMsg,
-      queriedData: cachedGetMessagePathDataItems(topicPath, prevTickMsg) ?? [],
-    },
-    useLatestMessageDataItem(topicPath),
-  ];
+  const matchedMessages = useMessageDataItem(topicPath, { historySize: 2 });
+  const diffMessages = useMessageDataItem(diffEnabled ? diffTopicPath : "");
 
-  const diffTopicObj = useLatestMessageDataItem(diffEnabled ? diffTopicPath : "");
+  const diffTopicObj = diffMessages[0];
+  const currTickObj = matchedMessages[matchedMessages.length - 1];
+  const prevTickObj = matchedMessages[matchedMessages.length - 2];
 
   const inTimetickDiffMode = diffEnabled && diffMethod === PREV_MSG_METHOD;
   const baseItem = inTimetickDiffMode ? prevTickObj : currTickObj;
@@ -328,18 +337,17 @@ function RawMessages(props: Props) {
         }}
       </ReactHoverObserver>
     ),
-    [datatypes, getValueLabels, onTopicPathChange, openSiblingPanel],
+    [classes, datatypes, getValueLabels, onTopicPathChange, openSiblingPanel],
   );
 
   const renderSingleTopicOrDiffOutput = useCallback(() => {
-    let shouldExpandNode;
-    if (expandAll != undefined) {
-      shouldExpandNode = () => expandAll;
-    } else {
-      shouldExpandNode = (keypath: (string | number)[]) => {
-        return expandedFields.has(keypath.join("~"));
-      };
-    }
+    const shouldExpandNode = (keypath: (string | number)[]) => {
+      if (expandAll != undefined) {
+        return expandAll;
+      }
+
+      return expandedFields.has(keypath.join("~"));
+    };
 
     if (topicPath.length === 0) {
       return <EmptyState>No topic selected</EmptyState>;
@@ -349,6 +357,7 @@ function RawMessages(props: Props) {
         <EmptyState>{`Waiting to diff next messages from "${topicPath}" and "${diffTopicPath}"`}</EmptyState>
       );
     }
+
     if (!baseItem) {
       return <EmptyState>Waiting for next message</EmptyState>;
     }
@@ -380,7 +389,7 @@ function RawMessages(props: Props) {
       : CheckboxBlankOutlineIcon;
 
     return (
-      <Flex col clip scroll className={classes.container}>
+      <div className={classes.topic}>
         <Metadata
           data={data}
           diffData={diffData}
@@ -410,9 +419,18 @@ function RawMessages(props: Props) {
             )}
             <Tree
               labelRenderer={(raw) => (
-                <DiffSpan onClick={() => onLabelClick(raw)}>{first(raw)}</DiffSpan>
+                <>
+                  <DiffSpan>{first(raw)}</DiffSpan>
+                  <span className={classes.invisibleSpace}>&nbsp;</span>
+                </>
               )}
               shouldExpandNode={shouldExpandNode}
+              onExpand={(_data, _level, keyPath) => {
+                onLabelClick(keyPath);
+              }}
+              onCollapse={(_data, _level, keyPath) => {
+                onLabelClick(keyPath);
+              }}
               hideRoot
               invertTheme={false}
               getItemString={getItemString}
@@ -550,10 +568,9 @@ function RawMessages(props: Props) {
             />
           </>
         )}
-      </Flex>
+      </div>
     );
   }, [
-    expandAll,
     topicPath,
     diffEnabled,
     diffMethod,
@@ -561,8 +578,10 @@ function RawMessages(props: Props) {
     diffItem,
     showFullMessageForDiff,
     topic,
+    classes,
     getItemString,
     jsonTreeTheme,
+    expandAll,
     expandedFields,
     diffTopicPath,
     saveConfig,
@@ -570,11 +589,11 @@ function RawMessages(props: Props) {
     valueRenderer,
     rootStructureItem,
     renderDiffLabel,
-    theme.isInverted,
+    theme,
   ]);
 
   return (
-    <Flex col clip style={{ position: "relative" }}>
+    <div className={classes.root}>
       <PanelToolbar helpContent={helpContent}>
         <Icon tooltip="Toggle diff" size="medium" fade onClick={onToggleDiff} active={diffEnabled}>
           <PlusMinusIcon />
@@ -583,6 +602,7 @@ function RawMessages(props: Props) {
           tooltip={expandAll ?? false ? "Collapse all" : "Expand all"}
           size="medium"
           fade
+          dataTest="expand-all"
           onClick={onToggleExpandAll}
           style={{ position: "relative", top: 1 }}
         >
@@ -593,26 +613,24 @@ function RawMessages(props: Props) {
             index={0}
             path={topicPath}
             onChange={onTopicPathChange}
-            inputStyle={{ height: "100%" }}
+            inputStyle={{ height: 20 }}
           />
           {diffEnabled && (
-            <Flex>
+            <div className={classes.diff}>
               <Tooltip contents="Diff method" placement="top">
-                <>
-                  <Dropdown
-                    value={diffMethod}
-                    onChange={(newDiffMethod) => saveConfig({ diffMethod: newDiffMethod })}
-                    noPortal
-                    btnStyle={{ padding: "4px 10px" }}
-                  >
-                    <DropdownItem value={PREV_MSG_METHOD}>
-                      <span>{PREV_MSG_METHOD}</span>
-                    </DropdownItem>
-                    <DropdownItem value={CUSTOM_METHOD}>
-                      <span>custom</span>
-                    </DropdownItem>
-                  </Dropdown>
-                </>
+                <Dropdown
+                  value={diffMethod}
+                  onChange={(newDiffMethod) => saveConfig({ diffMethod: newDiffMethod })}
+                  noPortal
+                  btnStyle={{ padding: "4px 10px" }}
+                >
+                  <DropdownItem value={PREV_MSG_METHOD}>
+                    <span>{PREV_MSG_METHOD}</span>
+                  </DropdownItem>
+                  <DropdownItem value={CUSTOM_METHOD}>
+                    <span>custom</span>
+                  </DropdownItem>
+                </Dropdown>
               </Tooltip>
               {diffMethod === CUSTOM_METHOD ? (
                 <MessagePathInput
@@ -623,12 +641,12 @@ function RawMessages(props: Props) {
                   {...(topic ? { prioritizedDatatype: topic.datatype } : {})}
                 />
               ) : undefined}
-            </Flex>
+            </div>
           )}
         </div>
       </PanelToolbar>
       {renderSingleTopicOrDiffOutput()}
-    </Flex>
+    </div>
   );
 }
 

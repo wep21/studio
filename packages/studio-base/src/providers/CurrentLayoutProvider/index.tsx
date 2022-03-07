@@ -33,6 +33,7 @@ import {
 import { useLayoutManager } from "@foxglove/studio-base/context/LayoutManagerContext";
 import { useUserProfileStorage } from "@foxglove/studio-base/context/UserProfileStorageContext";
 import { LinkedGlobalVariables } from "@foxglove/studio-base/panels/ThreeDimensionalViz/Interactions/useLinkedGlobalVariables";
+import { defaultLayout } from "@foxglove/studio-base/providers/CurrentLayoutProvider/defaultLayout";
 import panelsReducer from "@foxglove/studio-base/providers/CurrentLayoutProvider/reducers";
 import { LayoutID } from "@foxglove/studio-base/services/ConsoleApi";
 import { AppEvent } from "@foxglove/studio-base/services/IAnalytics";
@@ -183,6 +184,7 @@ export default function CurrentLayoutProvider({
 
         debouncedSaveTimeout.current = undefined;
         for (const params of layoutsToSave) {
+          void analytics.logEvent(AppEvent.LAYOUT_UPDATE);
           layoutManager.updateLayout(params).catch((error) => {
             log.error(error);
             if (isMounted()) {
@@ -200,7 +202,7 @@ export default function CurrentLayoutProvider({
       // debounced params are set in the proper order, we invoke setLayoutState at the end.
       setLayoutState({ selectedLayout: { ...newLayout, loading: false } });
     },
-    [addToast, isMounted, layoutManager, setLayoutState],
+    [addToast, analytics, isMounted, layoutManager, setLayoutState],
   );
 
   // Changes to the layout storage from external user actions (such as resetting a layout to a
@@ -228,7 +230,7 @@ export default function CurrentLayoutProvider({
   // Make sure our layout still exists after changes. If not deselect it.
   useEffect(() => {
     const listener: LayoutManagerEventTypes["change"] = async (event) => {
-      if (event.type !== "delete" || !layoutStateRef.current?.selectedLayout?.id) {
+      if (event.type !== "delete" || !layoutStateRef.current.selectedLayout?.id) {
         return;
       }
 
@@ -243,15 +245,27 @@ export default function CurrentLayoutProvider({
   }, [addToast, layoutManager, setSelectedLayoutId]);
 
   // Load initial state by re-selecting the last selected layout from the UserProfile.
-  // Don't restore the layout if there's one specified in the app state url.
   useAsync(async () => {
+    // Don't restore the layout if there's one specified in the app state url.
     if (windowAppURLState()?.layoutId) {
       return;
     }
 
+    // Retreive the selected layout id from the user's profile. If there's no layout specified
+    // or we can't load it then save and select a default layout.
     const { currentLayoutId } = await getUserProfile();
-    await setSelectedLayoutId(currentLayoutId, { saveToProfile: false });
-  }, [getUserProfile, setSelectedLayoutId]);
+    const layout = currentLayoutId ? await layoutManager.getLayout(currentLayoutId) : undefined;
+    if (layout) {
+      await setSelectedLayoutId(currentLayoutId, { saveToProfile: false });
+    } else {
+      const newLayout = await layoutManager.saveNewLayout({
+        name: "Default",
+        data: defaultLayout,
+        permission: "CREATOR_WRITE",
+      });
+      await setSelectedLayoutId(newLayout.id);
+    }
+  }, [getUserProfile, layoutManager, setSelectedLayoutId]);
 
   const actions: ICurrentLayout["actions"] = useMemo(
     () => ({
@@ -265,7 +279,7 @@ export default function CurrentLayoutProvider({
       createTabPanel: (payload: CreateTabPanelPayload) => {
         performAction({ type: "CREATE_TAB_PANEL", payload });
         setSelectedPanelIds([]);
-        void analytics?.logEvent(AppEvent.PANEL_ADD, { type: "Tab" });
+        void analytics.logEvent(AppEvent.PANEL_ADD, { type: "Tab" });
       },
       changePanelLayout: (payload: ChangePanelLayoutPayload) =>
         performAction({ type: "CHANGE_PANEL_LAYOUT", payload }),
@@ -286,7 +300,7 @@ export default function CurrentLayoutProvider({
         // Deselect the removed panel
         setSelectedPanelIds((ids) => ids.filter((id) => id !== closedId));
 
-        void analytics?.logEvent(
+        void analytics.logEvent(
           AppEvent.PANEL_DELETE,
           typeof closedId === "string" ? { type: getPanelTypeFromId(closedId) } : undefined,
         );
@@ -294,8 +308,8 @@ export default function CurrentLayoutProvider({
       splitPanel: (payload: SplitPanelPayload) => performAction({ type: "SPLIT_PANEL", payload }),
       swapPanel: (payload: SwapPanelPayload) => {
         performAction({ type: "SWAP_PANEL", payload });
-        void analytics?.logEvent(AppEvent.PANEL_ADD, { type: payload.type, action: "swap" });
-        void analytics?.logEvent(AppEvent.PANEL_DELETE, {
+        void analytics.logEvent(AppEvent.PANEL_ADD, { type: payload.type, action: "swap" });
+        void analytics.logEvent(AppEvent.PANEL_DELETE, {
           type: getPanelTypeFromId(payload.originalId),
           action: "swap",
         });
@@ -303,11 +317,11 @@ export default function CurrentLayoutProvider({
       moveTab: (payload: MoveTabPayload) => performAction({ type: "MOVE_TAB", payload }),
       addPanel: (payload: AddPanelPayload) => {
         performAction({ type: "ADD_PANEL", payload });
-        void analytics?.logEvent(AppEvent.PANEL_ADD, { type: getPanelTypeFromId(payload.id) });
+        void analytics.logEvent(AppEvent.PANEL_ADD, { type: getPanelTypeFromId(payload.id) });
       },
       dropPanel: (payload: DropPanelPayload) => {
         performAction({ type: "DROP_PANEL", payload });
-        void analytics?.logEvent(AppEvent.PANEL_ADD, {
+        void analytics.logEvent(AppEvent.PANEL_ADD, {
           type: payload.newPanelType,
           action: "drop",
         });

@@ -2,32 +2,19 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { Stack, useTheme } from "@fluentui/react";
+import { useTheme as useFluentTheme } from "@fluentui/react";
+import { Box, Stack } from "@mui/material";
 
 export default {
   title: "Theme",
 };
 
 function ColorStory({ colors }: { colors: [string, string][] }) {
-  const theme = useTheme();
-
   return (
-    <Stack
-      wrap
-      tokens={{ childrenGap: theme.spacing.s1 }}
-      style={{ padding: theme.spacing.m, overflowX: "auto" }}
-    >
+    <Stack flexWrap="wrap" padding={2} overflow="auto">
       {colors.map(([name, color]) => (
-        <Stack
-          key={name}
-          horizontal
-          verticalAlign="center"
-          tokens={{ childrenGap: theme.spacing.s1 }}
-        >
-          <div
-            key={name}
-            style={{ backgroundColor: color, width: theme.spacing.l2, height: theme.spacing.l2 }}
-          />
+        <Stack key={name} direction="row" alignItems="center" spacing={1} padding={0.5}>
+          <Box key={name} bgcolor={color} width={32} height={32} />
           <div>{name}</div>
         </Stack>
       ))}
@@ -36,12 +23,12 @@ function ColorStory({ colors }: { colors: [string, string][] }) {
 }
 
 export function Palette(): JSX.Element {
-  const theme = useTheme();
+  const theme = useFluentTheme();
   return <ColorStory colors={Object.entries(theme.palette)} />;
 }
 
 export function SemanticColors(): JSX.Element {
-  const theme = useTheme();
+  const theme = useFluentTheme();
   return (
     <ColorStory
       colors={Object.entries(theme.semanticColors).sort(([name1], [name2]) =>

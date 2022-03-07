@@ -15,17 +15,15 @@ import {
   DefaultButton,
   IconButton,
   IContextualMenuItemStyles,
-  Stack,
   Text,
   TextField,
   ITheme,
-  IStackStyles,
   ITextFieldStyles,
   IButtonStyles,
-  makeStyles,
-  mergeStyleSets,
   useTheme,
 } from "@fluentui/react";
+import { Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import { clamp, groupBy } from "lodash";
 import Tree from "rc-tree";
 import React, { useCallback, useMemo, useRef } from "react";
@@ -69,7 +67,7 @@ const DEFAULT_XS_WIDTH = 240;
 const SEARCH_BAR_HEIGHT = 40;
 const MAX_CONTAINER_WIDTH_RATIO = 0.9;
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme: Theme) => ({
   wrapper: {
     position: "absolute",
     top: CONTAINER_SPACING,
@@ -80,86 +78,104 @@ const useStyles = makeStyles((theme) => ({
   },
   tree: {
     position: "relative",
-    color: theme.semanticColors.bodyText,
-    borderRadius: theme.effects.roundedCorner4,
-    backgroundColor: theme.semanticColors.bodyBackground,
-    paddingBottom: theme.spacing.s1,
+    color: theme.palette.text.primary,
+    borderRadius: theme.shape.borderRadius,
+    backgroundColor: theme.palette.background.paper,
+    paddingBottom: theme.spacing(1),
     maxWidth: "100%",
     overflow: "auto",
     pointerEvents: "auto",
-    transition: "opacity 0.15s linear, transform 0.15s linear",
   },
   inner: {
-    "rc-tree li ul": {
+    display: "flex",
+    flexDirection: "column",
+    width: ({ treeWidth }: StyleProps) => treeWidth,
+
+    "& .rc-tree li ul": {
       padding: 0,
       paddingLeft: SWITCHER_WIDTH,
     },
-    ".rc-tree-node-content-wrapper": {
+    "& .rc-tree-node-content-wrapper": {
       cursor: "unset",
     },
     /* Make the chevron icon transition nicely between pointing down and right. */
-    ".rc-tree-switcher": {
+    "& .rc-tree-switcher": {
       height: ROW_HEIGHT,
       transition: "transform 80ms ease-in-out",
     },
-    ".rc-tree-switcher_close": {
+    "& .rc-tree-switcher_close": {
       transform: "rotate(-90deg)",
     },
-    ".rc-tree-switcher_open": {
+    "& .rc-tree-switcher_open": {
       transform: "rotate(0deg)",
     },
     /* Hide the chevron switcher icon when it's not usable. */
-    ".rc-tree-switcher-noop": {
+    "& .rc-tree-switcher-noop": {
       visibility: "hidden",
     },
-    ".rc-tree-treenode": {
+    "& .rc-tree-treenode": {
       display: "flex",
       padding: 0,
 
-      ":hover": {
-        background: theme.semanticColors.buttonBackgroundHovered,
+      "&:hover": {
+        background: theme.palette.action.hover,
       },
       ".isXSWidth &": {
         padding: `0 ${TREE_SPACING}px`,
       },
     },
-    ".rc-tree-treenode.rc-tree-treenode-disabled": {
-      color: theme.semanticColors.buttonTextDisabled,
+    "& .rc-tree-treenode.rc-tree-treenode-disabled": {
+      color: theme.palette.action.disabled,
 
       cursor: "unset",
 
-      ".rc-tree-node-content-wrapper": {
+      "& .rc-tree-node-content-wrapper": {
         cursor: "unset",
       },
     },
-    ".rc-tree-indent": {
+    "& .rc-tree-indent": {
       width: "100%",
     },
-    ".rc-tree-indent-unit": {
+    "& .rc-tree-indent-unit": {
       width: 24,
     },
-    ".rc-tree-treenode-switcher-close, .rc-tree-treenode-switcher-open": {
-      ".rc-tree-node-content-wrapper": {
+    "& .rc-tree-treenode-switcher-close, .rc-tree-treenode-switcher-open": {
+      "& .rc-tree-node-content-wrapper": {
         padding: 0,
       },
     },
+  },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(0.5),
+    padding: theme.spacing(0.5),
+    position: "sticky",
+    top: 0,
+    zIndex: 1,
+    backgroundColor: theme.palette.action.hover,
+    borderTopLeftRadius: theme.shape.borderRadius,
+    borderTopRightRadius: theme.shape.borderRadius,
+  },
+  inputWrapper: {
+    display: "flex",
+    flexGrow: 1,
+    position: "relative",
+  },
+  noResults: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 4,
+    paddingBottom: 2.5,
+    spacing: 2,
   },
 }));
 
 const useComponentStyles = (theme: ITheme) =>
   useMemo(
     () => ({
-      header: {
-        root: {
-          position: "sticky",
-          top: 0,
-          zIndex: 1,
-          backgroundColor: theme.semanticColors.buttonBackgroundHovered,
-          borderTopLeftRadius: theme.effects.roundedCorner4,
-          borderTopRightRadius: theme.effects.roundedCorner4,
-        },
-      } as Partial<IStackStyles>,
-
       input: {
         root: {
           width: "100%",
@@ -354,13 +370,8 @@ const useComponentStyles = (theme: ITheme) =>
     [theme],
   );
 
-const transitionClasses = mergeStyleSets({
+const useTransitionStyles = makeStyles({
   enter: {
-    opacity: 0,
-    transform: "translateX(-20px)",
-    pointerEvents: "none",
-  },
-  exitActive: {
     opacity: 0,
     transform: "translateX(-20px)",
     pointerEvents: "none",
@@ -368,6 +379,18 @@ const transitionClasses = mergeStyleSets({
   enterActive: {
     opacity: 1,
     transform: "none",
+    transition: "opacity 0.15s linear, transform 0.15s linear",
+  },
+  exit: {
+    opacity: 1,
+    transform: "none",
+    pointerEvents: "none",
+  },
+  exitActive: {
+    opacity: 0,
+    transform: "translateX(-20px)",
+    pointerEvents: "none",
+    transition: "opacity 0.15s linear, transform 0.15s linear",
   },
 });
 
@@ -407,6 +430,10 @@ type TopicTreeProps = SharedProps & {
   treeHeight: number;
 };
 
+type StyleProps = {
+  treeWidth: TopicTreeProps["treeWidth"];
+};
+
 const dropdownOptions = (Object.keys(TOPIC_DISPLAY_MODES) as TopicDisplayMode[]).map((key) => ({
   label: TOPIC_DISPLAY_MODES[key].label,
   value: TOPIC_DISPLAY_MODES[key].value,
@@ -436,7 +463,7 @@ function TopicTree({
   visibleTopicsCountByKey,
 }: TopicTreeProps) {
   const theme = useTheme();
-  const classes = useStyles();
+  const classes = useStyles({ treeWidth });
   const styles = useComponentStyles(theme);
   const scrollContainerRef = useRef<HTMLDivElement>(ReactNull);
   const checkedKeysSet = useMemo(() => new Set(checkedKeys), [checkedKeys]);
@@ -473,17 +500,9 @@ function TopicTree({
   );
 
   return (
-    <Stack className={classes.inner} styles={{ root: { width: treeWidth } }}>
-      <Stack
-        horizontal
-        verticalAlign="center"
-        styles={styles.header}
-        tokens={{
-          childrenGap: theme.spacing.s2,
-          padding: theme.spacing.s2,
-        }}
-      >
-        <Stack horizontal grow styles={{ root: { position: "relative" } }}>
+    <div className={classes.inner}>
+      <header className={classes.header}>
+        <div className={classes.inputWrapper}>
           <TextField
             iconProps={{ iconName: "Search" }}
             data-test="topic-tree-filter-input"
@@ -502,7 +521,7 @@ function TopicTree({
               styles={styles.clearIcon}
             />
           )}
-        </Stack>
+        </div>
         <DefaultButton
           disabled={!rootTreeNode.providerAvailable}
           menuIconProps={{ iconName: "CaretSolidDown" }}
@@ -529,24 +548,17 @@ function TopicTree({
           styles={styles.expandIcon}
           title={topLevelNodesCollapsed ? "Expand all" : "Collapse all"}
         />
-      </Stack>
+      </header>
       <div ref={scrollContainerRef} style={{ overflow: "auto", width: treeWidth }}>
         {showNoMatchesState ? (
-          <Stack
-            verticalAlign="center"
-            horizontalAlign="center"
-            tokens={{
-              padding: `${theme.spacing.l2} 0 ${theme.spacing.l1}`,
-              childrenGap: theme.spacing.m,
-            }}
-          >
+          <div className={classes.noResults}>
             <NoMatchesSvg />
             <Text variant="smallPlus" styles={{ root: { textAlign: "center", lineHeight: "1.3" } }}>
               No results found.
               <br />
               Try searching a different term.
             </Text>
-          </Stack>
+          </div>
         ) : (
           <Tree
             treeData={renderTreeNodes({
@@ -594,7 +606,7 @@ function TopicTree({
           />
         )}
       </div>
-    </Stack>
+    </div>
   );
 }
 
@@ -609,9 +621,10 @@ function TopicTreeWrapper({
   setShowTopicTree,
   ...rest
 }: WrapperProps) {
-  const classes = useStyles();
+  const transitionClasses = useTransitionStyles();
   const defaultTreeWidth = clamp(containerWidth, DEFAULT_XS_WIDTH, DEFAULT_WIDTH);
   const renderTopicTree = pinTopics || showTopicTree;
+  const classes = useStyles({ treeWidth: defaultTreeWidth });
 
   // Use a debounce and 0 refresh rate to avoid triggering a resize observation while handling
   // and existing resize observation.
@@ -621,6 +634,8 @@ function TopicTreeWrapper({
     refreshRate: 0,
     refreshMode: "debounce",
   });
+
+  const treeRef = useRef<HTMLDivElement>(ReactNull);
 
   return (
     <div className={classes.wrapper} style={{ height: containerHeight - CONTAINER_SPACING * 3 }}>
@@ -648,8 +663,9 @@ function TopicTreeWrapper({
           classNames={transitionClasses}
           mountOnEnter
           unmountOnExit
+          nodeRef={treeRef}
         >
-          <div className={classes.tree} onClick={(e) => e.stopPropagation()}>
+          <div ref={treeRef} className={classes.tree} onClick={(e) => e.stopPropagation()}>
             <TopicTree
               {...rest}
               sceneErrorsByKey={sceneErrorsByKey}

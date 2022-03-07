@@ -212,6 +212,11 @@ export type TextMarker = Readonly<
   }
 >;
 
+export type GlLineListMarker = Readonly<{
+  color: Float32Array;
+  points: Float32Array;
+}>;
+
 export type MeshMarker = Readonly<
   BaseMarker & {
     type: 10;
@@ -424,7 +429,8 @@ type Roi = Readonly<{
   do_rectify: false;
 }>;
 
-type DistortionModel = "plumb_bob" | "rational_polynomial";
+// Empty string indicates no distortion model
+export type DistortionModel = "plumb_bob" | "rational_polynomial" | "";
 
 export type CameraInfo = Readonly<{
   width: number;

@@ -11,7 +11,7 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { CameraState } from "@foxglove/regl-worldview";
+import { CameraState, ReglClickInfo } from "@foxglove/regl-worldview";
 import { Time } from "@foxglove/rostime";
 import {
   ArrowMarker,
@@ -32,6 +32,7 @@ import {
   ColorMarker,
   PoseStamped,
   MeshMarker,
+  GlLineListMarker,
 } from "@foxglove/studio-base/types/Messages";
 
 import { ColorOverrideByVariable, ColorOverride } from "./Layout";
@@ -67,8 +68,19 @@ export interface MarkerCollector {
   grid(arg0: OccupancyGridMessage): void;
   pointcloud(arg0: PointCloud): void;
   laserScan(arg0: LaserScan): void;
+  linedConvexHull(arg0: LineListMarker | LineStripMarker): void;
   instancedLineList(arg0: InstancedLineListMarker): void;
+  glLineList(arg0: GlLineListMarker): void;
 }
+
+export type MouseEventName = "onDoubleClick" | "onMouseMove" | "onMouseDown" | "onMouseUp";
+
+export type ReglMouseEventHandler = (ev: React.MouseEvent, click: ReglClickInfo) => void;
+
+export type MouseEventHandlerProps = {
+  addMouseEventHandler: (eventName: MouseEventName, handler: ReglMouseEventHandler) => void;
+  removeMouseEventHandler: (eventName: MouseEventName, handler: ReglMouseEventHandler) => void;
+};
 
 export type RenderMarkerArgs = {
   add: MarkerCollector;
@@ -83,25 +95,32 @@ export interface MarkerProvider {
 }
 
 export type ThreeDimensionalVizConfig = {
-  useThemeBackgroundColor: boolean;
-  customBackgroundColor: string;
-  enableShortDisplayNames?: boolean;
+  autoSyncCameraState?: boolean;
   autoTextBackgroundColor?: boolean;
   cameraState: Partial<CameraState>;
-  followTf?: string;
+  checkedKeys: string[];
+  clickToPublishPoseTopic: string;
+  clickToPublishPointTopic: string;
+  clickToPublishPoseEstimateTopic: string;
+  clickToPublishPoseEstimateXDeviation: number;
+  clickToPublishPoseEstimateYDeviation: number;
+  clickToPublishPoseEstimateThetaDeviation: number;
+  colorOverrideByVariable?: ColorOverrideByVariable;
+  customBackgroundColor: string;
+  diffModeEnabled: boolean;
+  disableAutoOpenClickedObject?: boolean;
+  enableShortDisplayNames?: boolean;
+  expandedKeys: string[];
+  ignoreColladaUpAxis?: boolean;
+  flattenMarkers?: boolean;
   followMode?: "follow" | "follow-orientation" | "no-follow";
+  followTf?: string;
   modifiedNamespaceTopics?: string[];
   pinTopics: boolean;
-  diffModeEnabled: boolean;
-  topicDisplayMode?: TopicDisplayMode;
-  flattenMarkers?: boolean;
-  showCrosshair?: boolean;
-  expandedKeys: string[];
-  checkedKeys: string[];
   settingsByKey: TopicSettingsCollection;
-  autoSyncCameraState?: boolean;
-  colorOverrideByVariable?: ColorOverrideByVariable;
-  disableAutoOpenClickedObject?: boolean;
+  showCrosshair?: boolean;
+  topicDisplayMode?: TopicDisplayMode;
+  useThemeBackgroundColor: boolean;
 } & PreviousThreeDimensionalVizConfig;
 
 /**

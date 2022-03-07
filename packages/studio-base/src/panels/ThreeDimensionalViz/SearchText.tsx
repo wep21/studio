@@ -11,14 +11,19 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { IButtonStyles, IconButton, Stack, TextField, useTheme } from "@fluentui/react";
+import { TextField, useTheme } from "@fluentui/react";
+import CloseIcon from "@mui/icons-material/Close";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import SearchIcon from "@mui/icons-material/Search";
+import { Paper, IconButton, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import { vec3 } from "gl-matrix";
 import { range, throttle } from "lodash";
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react";
 
 import { CameraState, cameraStateSelectors } from "@foxglove/regl-worldview";
 import { Time } from "@foxglove/rostime";
-import { useTooltip } from "@foxglove/studio-base/components/Tooltip";
 import useDeepChangeDetector from "@foxglove/studio-base/hooks/useDeepChangeDetector";
 import { Interactive } from "@foxglove/studio-base/panels/ThreeDimensionalViz/Interactions/types";
 import { IImmutableTransformTree } from "@foxglove/studio-base/panels/ThreeDimensionalViz/transforms";
@@ -218,13 +223,18 @@ export const useSearchMatches = ({
   ]);
 };
 
-const arrowButtonStyles = {
-  icon: { height: 18, fontSize: 10 },
-  root: { backgroundColor: "transparent", width: 18 },
-  rootHovered: { backgroundColor: "transparent" },
-  rootPressed: { backgroundColor: "transparent" },
-  rootDisabled: { backgroundColor: "transparent" },
-} as Partial<IButtonStyles>;
+const useStyles = makeStyles({
+  root: {
+    pointerEvents: "auto",
+    display: "flex",
+    alignItems: "center",
+    position: "relative",
+  },
+  icon: {
+    border: "none !important",
+    fontSize: "16px !important",
+  },
+});
 
 const SearchText = React.memo<SearchTextComponentProps>(function SearchText({
   searchTextOpen,
@@ -242,6 +252,7 @@ const SearchText = React.memo<SearchTextComponentProps>(function SearchText({
   fixedFrameId,
   currentTime,
 }: SearchTextComponentProps) {
+  const classes = useStyles();
   const theme = useTheme();
   const currentMatch = searchTextMatches[selectedMatchIndex];
   const iterateCurrentIndex = useCallback(
@@ -275,57 +286,23 @@ const SearchText = React.memo<SearchTextComponentProps>(function SearchText({
     transforms,
   });
   const hasMatches: boolean = searchTextMatches.length > 0;
-  const searchButton = useTooltip({ contents: "Search text markers", placement: "left" });
-
-  const iconStyle: Partial<IButtonStyles> = {
-    icon: {
-      color: theme.semanticColors.bodyText,
-
-      svg: {
-        fill: "currentColor",
-        height: "1em",
-        width: "1em",
-      },
-    },
-  };
 
   if (!searchTextOpen) {
     return (
-      <div>
-        {searchButton.tooltip}
+      <Paper className={classes.root} square={false} elevation={4}>
         <IconButton
-          elementRef={searchButton.ref}
-          iconProps={{ iconName: "Search" }}
+          className={classes.icon}
+          title="Search text markers"
           onClick={() => toggleSearchTextOpen(!searchTextOpen)}
-          styles={{
-            // see also ExpandingToolbar styles
-            root: {
-              backgroundColor: theme.semanticColors.buttonBackgroundHovered,
-              pointerEvents: "auto",
-            },
-            rootHovered: { backgroundColor: theme.semanticColors.buttonBackgroundHovered },
-            rootPressed: { backgroundColor: theme.semanticColors.buttonBackgroundHovered },
-            rootDisabled: { backgroundColor: theme.semanticColors.buttonBackgroundHovered },
-            ...iconStyle,
-          }}
-        />
-      </div>
+        >
+          <SearchIcon fontSize="inherit" />
+        </IconButton>
+      </Paper>
     );
   }
 
   return (
-    <Stack
-      horizontal
-      verticalAlign="center"
-      styles={{
-        root: {
-          pointerEvents: "auto",
-          backgroundColor: theme.semanticColors.buttonBackgroundHovered,
-          borderRadius: theme.effects.roundedCorner2,
-          position: "relative",
-        },
-      }}
-    >
+    <Paper className={classes.root} square={false} elevation={4}>
       <TextField
         autoFocus
         iconProps={{ iconName: "Search" }}
@@ -368,38 +345,30 @@ const SearchText = React.memo<SearchTextComponentProps>(function SearchText({
           iterateCurrentIndex(1);
         }}
       />
-      <Stack
-        horizontal
-        verticalAlign="center"
-        tokens={{
-          childrenGap: theme.spacing.s2,
-          padding: `0 0 0 ${theme.spacing.s2}`,
-        }}
-      >
-        <IconButton
-          iconProps={{ iconName: "ChevronUpSmall" }}
-          onClick={() => iterateCurrentIndex(-1)}
-          disabled={!hasMatches || searchTextMatches.length === selectedMatchIndex + 1}
-          styles={arrowButtonStyles}
-        />
-        <IconButton
-          iconProps={{ iconName: "ChevronDownSmall" }}
+      <ToggleButtonGroup size="small">
+        <ToggleButton
+          disableRipple
+          className={classes.icon}
+          value={1}
           onClick={() => iterateCurrentIndex(1)}
-          disabled={!hasMatches || selectedMatchIndex === 0}
-          styles={arrowButtonStyles}
-        />
-      </Stack>
-      <IconButton
-        onClick={() => toggleSearchTextOpen(false)}
-        iconProps={{ iconName: "Close" }}
-        styles={{
-          rootHovered: { backgroundColor: "transparent" },
-          rootPressed: { backgroundColor: "transparent" },
-          rootDisabled: { backgroundColor: "transparent" },
-          ...iconStyle,
-        }}
-      />
-    </Stack>
+          disabled={!hasMatches}
+        >
+          <KeyboardArrowUpIcon fontSize="inherit" />
+        </ToggleButton>
+        <ToggleButton
+          disableRipple
+          className={classes.icon}
+          value={-1}
+          onClick={() => iterateCurrentIndex(-1)}
+          disabled={!hasMatches}
+        >
+          <KeyboardArrowDownIcon fontSize="inherit" />
+        </ToggleButton>
+      </ToggleButtonGroup>
+      <IconButton onClick={() => toggleSearchTextOpen(false)} className={classes.icon}>
+        <CloseIcon fontSize="inherit" />
+      </IconButton>
+    </Paper>
   );
 });
 

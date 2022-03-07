@@ -2,21 +2,12 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { IconButton, Text, ITextProps, Stack, makeStyles, useTheme } from "@fluentui/react";
+import { IconButton, Text, ITextProps } from "@fluentui/react";
+import { Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 
 import { useTooltip } from "@foxglove/studio-base/components/Tooltip";
 import clipboard from "@foxglove/studio-base/util/clipboard";
-
-const useStyles = makeStyles({
-  root: {
-    "& > :last-child": {
-      visibility: "hidden",
-    },
-    ":hover > :last-child": {
-      visibility: "visible",
-    },
-  },
-});
 
 type Props = {
   copyText: string;
@@ -25,6 +16,32 @@ type Props = {
   children: React.ReactNode;
 };
 
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    userSelect: "none",
+    cursor: "pointer",
+
+    "& > :last-child": {
+      visibility: "hidden",
+    },
+    "&:hover > :last-child": {
+      visibility: "visible",
+    },
+    "&:active": {
+      color: theme.palette.text.primary,
+    },
+  },
+  truncate: {
+    flexGrow: 1,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+  },
+}));
+
 export default function CopyText({
   copyText,
   textProps,
@@ -32,7 +49,6 @@ export default function CopyText({
   children,
 }: Props): JSX.Element | ReactNull {
   const classes = useStyles();
-  const theme = useTheme();
   const button = useTooltip({ contents: tooltip });
 
   if (copyText.length === 0 || children == undefined) {
@@ -40,34 +56,10 @@ export default function CopyText({
   }
 
   return (
-    <Stack
-      className={classes.root}
-      horizontal
-      verticalAlign="center"
-      onClick={() => void clipboard.copy(copyText)}
-      styles={{
-        root: {
-          userSelect: "none",
-          cursor: "pointer",
-
-          ":active": {
-            color: theme.semanticColors.buttonTextPressed,
-          },
-        },
-      }}
-    >
-      <Stack.Item
-        grow
-        styles={{
-          root: {
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-          },
-        }}
-      >
-        <Text {...textProps}>{children != undefined ? children : copyText}</Text>
-      </Stack.Item>
+    <div className={classes.root} onClick={() => void clipboard.copy(copyText)}>
+      <div className={classes.truncate}>
+        <Text {...textProps}>{children}</Text>
+      </div>
       {button.tooltip}
       <IconButton
         elementRef={button.ref}
@@ -86,6 +78,6 @@ export default function CopyText({
           },
         }}
       />
-    </Stack>
+    </div>
   );
 }

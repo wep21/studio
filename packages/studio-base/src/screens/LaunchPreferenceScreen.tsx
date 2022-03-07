@@ -2,30 +2,32 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import {
-  CompoundButton,
-  Checkbox,
-  Stack,
-  Text,
-  useTheme,
-  makeStyles,
-  IButtonStyles,
-} from "@fluentui/react";
+import { CompoundButton, Checkbox, Text, IButtonStyles } from "@fluentui/react";
+import { Card, Stack, Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import { ReactElement, useState } from "react";
 
 import { AppSetting } from "@foxglove/studio-base/AppSetting";
 import { useAppConfigurationValue } from "@foxglove/studio-base/hooks";
 import { useSessionStorageValue } from "@foxglove/studio-base/hooks/useSessionStorageValue";
 
-const useStyles = makeStyles((theme) => ({
-  container: {
-    border: `1px solid ${theme.semanticColors.bodyDivider}`,
-    borderRadius: theme.effects.roundedCorner4,
-    marginBottom: theme.spacing.l2,
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+  },
+  card: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2.5),
+    padding: theme.spacing(2.5),
+    marginBottom: theme.spacing(4),
+    maxWidth: 480,
   },
   title: {
     textAlign: "center",
-    marginBottom: theme.spacing.m,
+    marginBottom: theme.spacing(2),
   },
 }));
 
@@ -35,7 +37,6 @@ const buttonStyles = {
 } as Partial<IButtonStyles>;
 
 export function LaunchPreferenceScreen(): ReactElement {
-  const theme = useTheme();
   const classes = useStyles();
 
   const [globalPreference, setGlobalPreference] = useAppConfigurationValue<string | undefined>(
@@ -72,19 +73,12 @@ export function LaunchPreferenceScreen(): ReactElement {
   }
 
   return (
-    <Stack horizontalAlign="center" verticalAlign="center" verticalFill>
-      <Stack
-        className={classes.container}
-        tokens={{
-          childrenGap: theme.spacing.l1,
-          padding: theme.spacing.l1,
-          maxWidth: 480,
-        }}
-      >
+    <Stack className={classes.root}>
+      <Card variant="outlined" className={classes.card}>
         <Text className={classes.title} variant="xxLarge">
           Launch Foxglove Studio
         </Text>
-        <Stack horizontal tokens={{ childrenGap: theme.spacing.m }}>
+        <Stack direction="row" spacing={2}>
           <CompoundButton
             styles={buttonStyles}
             onClick={() => void launchInWeb()}
@@ -105,7 +99,7 @@ export function LaunchPreferenceScreen(): ReactElement {
           checked={rememberPreference}
           onChange={toggleRememberPreference}
         />
-      </Stack>
+      </Card>
     </Stack>
   );
 }

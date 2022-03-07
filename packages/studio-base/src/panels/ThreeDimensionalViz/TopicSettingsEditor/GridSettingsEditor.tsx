@@ -11,16 +11,16 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { Stack } from "@mui/material";
+
 import { Color } from "@foxglove/regl-worldview";
 import ColorPicker from "@foxglove/studio-base/components/ColorPicker";
-import Flex from "@foxglove/studio-base/components/Flex";
 
 import { TopicSettingsEditorProps } from ".";
 import { SLabel, SDescription, SInput } from "./common";
 
 export type GridSettings = {
   overrideColor?: Color;
-  lineWidth?: number;
   width?: number;
   subdivisions?: number;
   heightOffset?: number;
@@ -34,27 +34,12 @@ export default function GridSettingsEditor(
   const { settings = {}, onFieldChange } = props;
 
   return (
-    <Flex col>
+    <Stack flex="auto">
       <SLabel>Color</SLabel>
       <SDescription>Set the grid color.</SDescription>
       <ColorPicker
         color={settings.overrideColor ?? DEFAULT_GRID_COLOR}
         onChange={(newColor) => onFieldChange("overrideColor", newColor)}
-      />
-
-      <SLabel>Line width</SLabel>
-      <SInput
-        data-test="line-width-input"
-        type="number"
-        placeholder={"1"}
-        value={settings.lineWidth ?? ""}
-        min={0.1}
-        max={2}
-        step={0.1}
-        onChange={(e) => {
-          const isInputValid = !isNaN(parseFloat(e.target.value));
-          onFieldChange("lineWidth", isInputValid ? parseFloat(e.target.value) : undefined);
-        }}
       />
 
       <SLabel>Width</SLabel>
@@ -101,6 +86,6 @@ export default function GridSettingsEditor(
           onFieldChange("heightOffset", isInputValid ? parseFloat(e.target.value) : undefined);
         }}
       />
-    </Flex>
+    </Stack>
   );
 }

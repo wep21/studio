@@ -6,6 +6,11 @@ import { Theme, ThemeOptions } from "@mui/material/styles";
 import { CSSProperties } from "@mui/styles";
 
 type MuiLabComponents = {
+  MuiFocusVisible?: {
+    styleOverrides?: {
+      root?: CSSProperties;
+    };
+  };
   MuiToggleButton?: {
     styleOverrides?: {
       root?: CSSProperties;
@@ -20,12 +25,12 @@ type MuiLabComponents = {
 };
 
 const iconHack = {
-  "& svg": {
+  "& svg:not(.MuiSvgIcon-root)": {
     fill: "currentColor",
     width: "1em",
     height: "1em",
     display: "inline-block",
-    fontSize: "1rem",
+    fontSize: "1.2857142857142856rem",
     transition: "fill 200ms cubic-bezier(0.4, 0, 0.2, 1) 0ms",
     flexShrink: 0,
     userSelect: "none",
@@ -62,28 +67,22 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
         disableElevation: true,
       },
     },
-    MuiButtonBase: {},
-    MuiIconButton: {
-      defaultProps: {
-        centerRipple: false,
-      },
-      styleOverrides: {
-        root: {
-          borderRadius: theme.shape.borderRadius,
-          ...iconHack,
-        },
-      },
-    },
     MuiCard: {
       defaultProps: {
         variant: "outlined",
+        square: false,
+      },
+    },
+    MuiCardActionArea: {
+      defaultProps: {
+        disableRipple: true,
       },
     },
     MuiCardContent: {
       styleOverrides: {
         root: {
           "&:last-child": {
-            paddingBottom: undefined,
+            paddingBottom: theme.spacing(2),
           },
         },
       },
@@ -102,21 +101,122 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
         },
       },
     },
-    MuiListItemIcon: {
-      styleOverrides: {
-        root: { minWidth: theme.spacing(6) },
+    MuiCheckbox: {
+      defaultProps: {
+        disableRipple: true,
       },
     },
-    MuiPaper: {
+    MuiFilledInput: {
       defaultProps: {
-        elevation: 0,
-        square: true,
+        disableUnderline: true,
+      },
+      styleOverrides: {
+        input: {
+          padding: theme.spacing(1, 1.25),
+        },
+        inputSizeSmall: {
+          padding: theme.spacing(0.5, 1),
+        },
+        root: {
+          borderRadius: theme.shape.borderRadius,
+
+          "&.Mui-focused": {
+            backgroundColor: theme.palette.action.focus,
+          },
+        },
+      },
+    },
+    MuiFocusVisible: {
+      styleOverrides: {
+        root: {
+          borderRadius: theme.shape.borderRadius,
+        },
+      },
+    },
+    MuiIconButton: {
+      defaultProps: {
+        centerRipple: false,
+        disableRipple: true,
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: theme.shape.borderRadius,
+          ...iconHack,
+
+          "&:hover": {
+            backgroundColor: theme.palette.action.hover,
+          },
+        },
+      },
+    },
+    MuiInput: {
+      styleOverrides: {
+        input: {
+          padding: theme.spacing(1, 1.25),
+        },
+        inputSizeSmall: {
+          padding: theme.spacing(0.5, 1),
+        },
+      },
+    },
+    MuiInputBase: {
+      styleOverrides: {
+        adornedEnd: {
+          "&.MuiInputBase-sizeSmall": {
+            paddingRight: theme.spacing(1),
+
+            "& .MuiSvgIcon-root": {
+              fontSize: "1rem",
+            },
+          },
+        },
+        adornedStart: {
+          "&.MuiInputBase-sizeSmall": {
+            paddingLeft: theme.spacing(1),
+
+            "& .MuiSvgIcon-root": {
+              fontSize: "1rem",
+            },
+            "& .MuiSelect-select": {
+              paddingRight: `${theme.spacing(2)} !important`,
+            },
+          },
+        },
+        inputSizeSmall: {
+          fontSize: theme.typography.body2.fontSize,
+        },
+        root: {
+          "&.MuiInput-root": {
+            marginTop: 0,
+          },
+        },
+      },
+    },
+    MuiInputLabel: {
+      defaultProps: {
+        variant: "standard",
+        sx: { position: "relative" },
       },
     },
     MuiLink: {
       defaultProps: {
         color: prefersDarkMode ? "secondary" : "primary",
       },
+      styleOverrides: {
+        root: {
+          cursor: "pointer",
+        },
+      },
+    },
+    MuiListSubheader: {
+      styleOverrides: {
+        root: {
+          lineHeight: theme.spacing(4),
+        },
+      },
+    },
+    MuiListItemButton: {
+      defaultProps: { disableRipple: true },
     },
     MuiMenu: {
       styleOverrides: {
@@ -125,7 +225,43 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
         },
       },
     },
-    MuiUseMediaQuery: {},
+    MuiMenuItem: {
+      defaultProps: {
+        disableRipple: true,
+      },
+      styleOverrides: {
+        dense: {
+          minHeight: theme.spacing(3),
+          paddingTop: 0,
+          paddingBottom: 0,
+
+          "& .MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall": {
+            fontSize: "1rem",
+          },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        input: {
+          padding: theme.spacing(1, 1.25),
+        },
+        inputSizeSmall: {
+          padding: theme.spacing(0.5, 1),
+        },
+      },
+    },
+    MuiPaper: {
+      defaultProps: {
+        elevation: 2,
+        square: true,
+      },
+    },
+    MuiRadio: {
+      defaultProps: {
+        disableRipple: true,
+      },
+    },
     MuiTab: {
       styleOverrides: {
         labelIcon: iconHack,
@@ -138,16 +274,26 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
         },
       },
     },
-    MuiToolbar: {
-      styleOverrides: {
-        root: {
-          justifyContent: "space-between",
+    MuiTextField: {
+      defaultProps: {
+        InputLabelProps: {
+          shrink: true,
+        },
+        InputProps: {
+          notched: false,
         },
       },
     },
     MuiToggleButton: {
       styleOverrides: {
         label: iconHack,
+      },
+    },
+    MuiToolbar: {
+      styleOverrides: {
+        root: {
+          justifyContent: "space-between",
+        },
       },
     },
   };

@@ -22,8 +22,11 @@ import {
 } from "@foxglove/studio-base/components/MessagePipeline";
 import PanelContext from "@foxglove/studio-base/components/PanelContext";
 import useCleanup from "@foxglove/studio-base/hooks/useCleanup";
-import { SubscribePayload, MessageEvent } from "@foxglove/studio-base/players/types";
-import { MemoryCacheBlock } from "@foxglove/studio-base/randomAccessDataProviders/MemoryCacheDataProvider";
+import {
+  SubscribePayload,
+  MessageEvent,
+  MessageBlock as PlayerMessageBlock,
+} from "@foxglove/studio-base/players/types";
 
 export type MessageBlock = {
   readonly [topicName: string]: readonly MessageEvent<unknown>[];
@@ -33,7 +36,7 @@ export type MessageBlock = {
 // That said, MessageBlock identity will change when the set of topics changes, so consumers should
 // prefer to use the identity of topic-block message arrays where possible.
 const filterBlockByTopics = memoizeWeak(
-  (block: MemoryCacheBlock | undefined, topics: readonly string[]): MessageBlock => {
+  (block: PlayerMessageBlock | undefined, topics: readonly string[]): MessageBlock => {
     if (!block) {
       // For our purposes, a missing MemoryCacheBlock just means "no topics have been cached for
       // this block". This is semantically different to an empty array per topic, but not different
@@ -66,8 +69,9 @@ const useSubscribeToTopicsForBlocks = (topics: readonly string[]) => {
     ),
   );
   const subscriptions: SubscribePayload[] = useMemo(() => {
-    const requester = panelType != undefined ? { type: "panel", name: panelType } : undefined;
-    return topics.map((topic) => ({ topic, requester } as SubscribePayload));
+    const requester: SubscribePayload["requester"] =
+      panelType != undefined ? { type: "panel", name: panelType } : undefined;
+    return topics.map((topic) => ({ topic, requester, preloadType: "full" }));
   }, [panelType, topics]);
   useEffect(() => setSubscriptions(id, subscriptions), [id, setSubscriptions, subscriptions]);
   useCleanup(() => setSubscriptions(id, []));
@@ -91,7 +95,7 @@ export function useBlocksByTopic(topics: readonly string[]): readonly MessageBlo
 
   useSubscribeToTopicsForBlocks(requestedTopics);
 
-  const allBlocks = useMessagePipeline<readonly (MemoryCacheBlock | undefined)[] | undefined>(
+  const allBlocks = useMessagePipeline<readonly (PlayerMessageBlock | undefined)[] | undefined>(
     useCallback((ctx) => ctx.playerState.progress.messageCache?.blocks, []),
   );
 

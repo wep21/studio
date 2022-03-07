@@ -14,6 +14,7 @@
 import { useRef, useMemo, useState, useEffect, useContext, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+import { useShallowMemo } from "@foxglove/hooks";
 import Log from "@foxglove/log";
 import {
   useMessagePipeline,
@@ -21,52 +22,22 @@ import {
 } from "@foxglove/studio-base/components/MessagePipeline";
 import PanelContext from "@foxglove/studio-base/components/PanelContext";
 import useCleanup from "@foxglove/studio-base/hooks/useCleanup";
-import useDeepMemo from "@foxglove/studio-base/hooks/useDeepMemo";
 import useShouldNotChangeOften from "@foxglove/studio-base/hooks/useShouldNotChangeOften";
 import {
   MessageEvent,
   PlayerStateActiveData,
   SubscribePayload,
+  SubscriptionPreloadType,
 } from "@foxglove/studio-base/players/types";
 
 const log = Log.getLogger(__filename);
 
 type MessageReducer<T> = (arg0: T, message: MessageEvent<unknown>) => T;
 type MessagesReducer<T> = (arg0: T, messages: readonly MessageEvent<unknown>[]) => T;
-export type RequestedTopic = string | { topic: string };
-
-// Compute the subscriptions to be requested from the player.
-function useSubscriptions({
-  requestedTopics,
-  panelType,
-}: {
-  requestedTopics: readonly RequestedTopic[];
-  panelType?: string;
-}): SubscribePayload[] {
-  return useMemo(() => {
-    const requester: SubscribePayload["requester"] =
-      panelType != undefined ? { type: "panel", name: panelType } : undefined;
-
-    return requestedTopics.map((request) => {
-      if (typeof request === "object") {
-        // We might be able to remove the `encoding` field from the protocol entirely, and only
-        // use scale. Or we can deal with scaling down in a different way altogether, such as having
-        // special topics or syntax for scaled down versions of images or so. In any case, we should
-        // be cautious about having metadata on subscriptions, as that leads to the problem of how to
-        // deal with multiple subscriptions to the same topic but with different metadata.
-        return {
-          requester,
-          topic: request.topic,
-          encoding: "image/compressed",
-        };
-      }
-      return { requester, topic: request };
-    });
-  }, [panelType, requestedTopics]);
-}
 
 type Params<T> = {
-  topics: readonly RequestedTopic[];
+  topics: readonly string[];
+  preloadType?: SubscriptionPreloadType;
 
   // Functions called when the reducers change and for each newly received message.
   // The object is assumed to be immutable, so in order to trigger a re-render, the reducers must
@@ -87,6 +58,7 @@ function selectSetSubscriptions(ctx: MessagePipelineContext) {
 export function useMessageReducer<T>(props: Params<T>): T {
   const [id] = useState(() => uuidv4());
   const { type: panelType = undefined } = useContext(PanelContext) ?? {};
+  const { restore, addMessage, addMessages, preloadType = "partial" } = props;
 
   // only one of the add message callbacks should be provided
   if ([props.addMessage, props.addMessages].filter(Boolean).length !== 1) {
@@ -117,15 +89,14 @@ export function useMessageReducer<T>(props: Params<T>): T {
     ),
   );
 
-  const requestedTopics = useDeepMemo(props.topics);
-  const requestedTopicsSet = useMemo(
-    () => new Set(requestedTopics.map((req) => (typeof req === "object" ? req.topic : req))),
-    [requestedTopics],
-  );
-  const subscriptions = useSubscriptions({
-    requestedTopics,
-    panelType,
-  });
+  const requestedTopics = useShallowMemo(props.topics);
+
+  const subscriptions = useMemo<SubscribePayload[]>(() => {
+    const requester: SubscribePayload["requester"] =
+      panelType != undefined ? { type: "panel", name: panelType } : undefined;
+
+    return requestedTopics.map((topic) => ({ requester, topic, preloadType }));
+  }, [panelType, preloadType, requestedTopics]);
 
   const setSubscriptions = useMessagePipeline(selectSetSubscriptions);
   useEffect(() => setSubscriptions(id, subscriptions), [id, setSubscriptions, subscriptions]);
@@ -135,8 +106,6 @@ export function useMessageReducer<T>(props: Params<T>): T {
 
   // Whenever `subscriptions` change, request a backfill, since we'd like to show fresh data.
   useEffect(() => requestBackfill(), [requestBackfill, subscriptions]);
-
-  const { restore, addMessage, addMessages } = props;
 
   const state = useRef<
     | Readonly<{
@@ -157,7 +126,7 @@ export function useMessageReducer<T>(props: Params<T>): T {
       // - Call addMessage() or addMessages() if any new messages of interest have arrived
       // - Otherwise, return the previous reducedValue so that we don't trigger an unnecessary render.
       function selectReducedMessages(ctx: MessagePipelineContext): T {
-        const messageEvents = ctx.playerState.activeData?.messages;
+        const messageEvents = ctx.messageEventsBySubscriberId.get(id);
         const lastSeekTime = ctx.playerState.activeData?.lastSeekTime;
 
         let newReducedValue: T;
@@ -178,13 +147,12 @@ export function useMessageReducer<T>(props: Params<T>): T {
           messageEvents.length > 0 &&
           messageEvents !== state.current?.messageEvents
         ) {
-          const filtered = messageEvents.filter(({ topic }) => requestedTopicsSet.has(topic));
           if (addMessages) {
-            if (filtered.length > 0) {
-              newReducedValue = addMessages(newReducedValue, filtered);
+            if (messageEvents.length > 0) {
+              newReducedValue = addMessages(newReducedValue, messageEvents);
             }
           } else if (addMessage) {
-            for (const messageEvent of filtered) {
+            for (const messageEvent of messageEvents) {
               newReducedValue = addMessage(newReducedValue, messageEvent);
             }
           }
@@ -201,7 +169,7 @@ export function useMessageReducer<T>(props: Params<T>): T {
 
         return state.current.reducedValue;
       },
-      [addMessage, addMessages, restore, requestedTopicsSet],
+      [id, addMessage, addMessages, restore],
     ),
   );
 }

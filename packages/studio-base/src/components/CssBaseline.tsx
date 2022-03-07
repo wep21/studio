@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme) => ({
         borderRadius: "2px",
       },
     },
-    p: {
+    "p:not(.MuiTypography-root)": {
       margin: "1em 0",
 
       ":last-child": {
@@ -47,7 +47,6 @@ const useStyles = makeStyles((theme) => ({
       borderSpacing: 0,
     },
     "th, td": {
-      textAlign: "left",
       verticalAlign: "top",
     },
 

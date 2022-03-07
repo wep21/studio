@@ -2,7 +2,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { Stack, makeStyles } from "@fluentui/react";
+import { makeStyles } from "@fluentui/react";
 import cx from "classnames";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLatest } from "react-use";
@@ -26,6 +26,13 @@ import { ProgressPlot } from "./ProgressPlot";
 import Slider from "./Slider";
 
 const useStyles = makeStyles((theme) => ({
+  root: {
+    display: "flex",
+    flexGrow: 1,
+    alignItems: "center",
+    height: 28,
+    position: "relative",
+  },
   fullWidthBar: {
     position: "absolute",
     top: "12px",
@@ -53,6 +60,8 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
   },
   stateBar: {
+    display: "flex",
+    flexDirection: "column",
     position: "absolute",
     zIndex: 1,
     flex: 1,
@@ -118,12 +127,11 @@ export default function Scrubber(props: Props): JSX.Element {
 
   const latestStartTime = useLatest(startTime);
   const onHoverOver = useCallback(
-    (ev: React.MouseEvent<HTMLDivElement>, value: number) => {
+    (x: number, value: number) => {
       if (!latestStartTime.current || el.current == undefined) {
         return;
       }
       const currentEl = el.current;
-      const x = ev.clientX;
       // fix the y position of the tooltip to float on top of the playback bar
       const y = currentEl.getBoundingClientRect().top;
 
@@ -202,16 +210,12 @@ export default function Scrubber(props: Props): JSX.Element {
   const step = ((max ?? 100) - (min ?? 0)) / 500;
 
   return (
-    <>
+    <div className={classes.root}>
       {tooltip}
-      <div
-        className={cx(classes.fullWidthBar, {
-          [classes.fullWidthBarActive]: startTime,
-        })}
-      />
-      <Stack className={classes.stateBar}>
+      <div className={cx(classes.fullWidthBar, { [classes.fullWidthBarActive]: startTime })} />
+      <div className={classes.stateBar}>
         <ProgressPlot progress={progress} />
-      </Stack>
+      </div>
       <div ref={el} className={classes.sliderContainer}>
         <Slider
           min={min ?? 0}
@@ -219,7 +223,6 @@ export default function Scrubber(props: Props): JSX.Element {
           disabled={min == undefined || max == undefined}
           step={step}
           value={value}
-          draggable
           onHoverOver={onHoverOver}
           onHoverOut={onHoverOut}
           onChange={onChange}
@@ -227,6 +230,6 @@ export default function Scrubber(props: Props): JSX.Element {
         />
       </div>
       <PlaybackBarHoverTicks componentId={hoverComponentId} />
-    </>
+    </div>
   );
 }

@@ -7,12 +7,13 @@ import {
   Dialog,
   DialogFooter,
   IconButton,
-  Stack,
   TextField,
   useTheme,
 } from "@fluentui/react";
+import { Stack } from "@mui/material";
 import { useCallback, useMemo, useState } from "react";
 
+import { useDialogHostId } from "@foxglove/studio-base/context/DialogHostIdContext";
 import clipboard from "@foxglove/studio-base/util/clipboard";
 import { downloadTextFile } from "@foxglove/studio-base/util/download";
 import { fonts } from "@foxglove/studio-base/util/sharedStyleConstants";
@@ -33,7 +34,8 @@ export default function ShareJsonModal({
   title,
 }: Props): React.ReactElement {
   const theme = useTheme();
-  const [value, setValue] = useState(JSON.stringify(initialValue, undefined, 2));
+  const hostId = useDialogHostId();
+  const [value, setValue] = useState(JSON.stringify(initialValue, undefined, 2) ?? "");
   const [copied, setCopied] = useState(false);
 
   const { decodedValue, error } = useMemo(() => {
@@ -69,6 +71,7 @@ export default function ShareJsonModal({
         subText: `Paste a new ${noun} to use it, or copy this one to share it:`,
         showCloseButton: true,
       }}
+      modalProps={{ layerProps: { hostId } }}
       maxWidth={`calc(100vw - ${theme.spacing.l2})`}
     >
       <TextField
@@ -99,7 +102,7 @@ export default function ShareJsonModal({
           },
         }}
       >
-        <Stack tokens={{ childrenGap: theme.spacing.s1 }} horizontal>
+        <Stack direction="row" spacing={1}>
           <IconButton
             onClick={handleDownload}
             iconProps={{ iconName: "Download" }}

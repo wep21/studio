@@ -372,7 +372,7 @@ class StudioWindow {
         const existingMenu = Menu.getApplicationMenu();
         const fileMenu = existingMenu?.getMenuItemById("fileMenu");
         // https://github.com/electron/electron/issues/8598
-        (fileMenu?.submenu as ClearableMenu)?.clear();
+        (fileMenu?.submenu as undefined | ClearableMenu)?.clear();
         fileMenu?.submenu?.append(
           new MenuItem({
             label: "New Window",
@@ -418,19 +418,14 @@ class StudioWindow {
       return;
     }
 
-    // Electron menus require a preceding & to escape the & char
-    const formattedName = name
-      .split("")
-      .map((char) => (char === "&" ? "&&" : char))
-      .join("");
-    this._inputSources.add(formattedName);
+    this._inputSources.add(name);
 
     const fileMenu = this._menu.getMenuItemById("fileMenu");
     if (!fileMenu) {
       return;
     }
 
-    const existingItem = fileMenu.submenu?.getMenuItemById(formattedName);
+    const existingItem = fileMenu.submenu?.getMenuItemById(name);
     // If the item already exists, we can silently return
     // The existing click handler will support the new item since they have the same name
     if (existingItem) {
@@ -447,7 +442,7 @@ class StudioWindow {
   removeInputSource(name: string): void {
     this._inputSources.delete(name);
 
-    const fileMenu = this._menu?.getMenuItemById("fileMenu");
+    const fileMenu = this._menu.getMenuItemById("fileMenu");
     if (!fileMenu) {
       return;
     }
@@ -513,11 +508,12 @@ class StudioWindow {
     fileMenu.submenu?.append(
       new MenuItem({
         label: "Open Connection",
-        submenu: Array.from(this._inputSources).map((sourceName) => ({
-          label: sourceName,
+        submenu: Array.from(this._inputSources).map((name) => ({
+          // Electron menus require a preceding & to escape the & char
+          label: name.replace(/&/g, "&&"),
           click: async () => {
             await simulateUserClick(browserWindow);
-            browserWindow.webContents.send("menu.click-input-source", sourceName);
+            browserWindow.webContents.send("menu.click-input-source", name);
           },
         })),
       }),

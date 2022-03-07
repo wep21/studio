@@ -12,6 +12,8 @@
 //   You may not use this file except in compliance with the License.
 
 import { useTheme } from "@fluentui/react";
+import CameraControlIcon from "@mdi/svg/svg/camera-control.svg";
+import { Stack } from "@mui/material";
 import { vec3 } from "gl-matrix";
 import { isEqual } from "lodash";
 import styled from "styled-components";
@@ -19,7 +21,6 @@ import styled from "styled-components";
 import { CameraState, cameraStateSelectors, Vec3 } from "@foxglove/regl-worldview";
 import Button from "@foxglove/studio-base/components/Button";
 import ExpandingToolbar, { ToolGroup } from "@foxglove/studio-base/components/ExpandingToolbar";
-import Flex from "@foxglove/studio-base/components/Flex";
 import JsonInput from "@foxglove/studio-base/components/JsonInput";
 import { LegacyInput } from "@foxglove/studio-base/components/LegacyStyledComponents";
 import { usePanelContext } from "@foxglove/studio-base/components/PanelContext";
@@ -28,7 +29,7 @@ import {
   SValue,
   SLabel,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/Interactions/styling";
-import styles from "@foxglove/studio-base/panels/ThreeDimensionalViz/sharedStyles";
+import useSharedStyles from "@foxglove/studio-base/panels/ThreeDimensionalViz/sharedStyles";
 import { getNewCameraStateOnFollowChange } from "@foxglove/studio-base/panels/ThreeDimensionalViz/threeDimensionalVizUtils";
 import {
   FollowMode,
@@ -70,6 +71,7 @@ export type CameraInfoProps = {
 } & CameraInfoPropsWithoutCameraState;
 
 function CameraStateInfo({ cameraState, onAlignXYAxis }: CameraStateInfoProps) {
+  const classes = useSharedStyles();
   return (
     <>
       {(Object.keys(cameraState) as (keyof CameraState)[])
@@ -90,7 +92,7 @@ function CameraStateInfo({ cameraState, onAlignXYAxis }: CameraStateInfoProps) {
             <SLabel width={LABEL_WIDTH}>{key}:</SLabel> <SValue>{val}</SValue>
             {key === "thetaOffset" && (
               <Button
-                className={styles.button}
+                className={classes.button}
                 onClick={onAlignXYAxis}
                 tooltip="Align XY axis by reseting thetaOffset to 0. Will no longer follow orientation."
               >
@@ -115,6 +117,7 @@ export default function CameraInfo({
   defaultSelectedTab,
 }: CameraInfoProps): JSX.Element {
   const theme = useTheme();
+  const classes = useSharedStyles();
   const [selectedTab, setSelectedTab] = React.useState(defaultSelectedTab);
   const { updatePanelConfigs, saveConfig } = usePanelContext();
   const [edit, setEdit] = React.useState<boolean>(false);
@@ -146,26 +149,26 @@ export default function CameraInfo({
   return (
     <ExpandingToolbar
       tooltip="Camera"
-      iconName="CameraControl"
+      icon={<CameraControlIcon />}
       checked={autoSyncCameraState}
       selectedTab={selectedTab}
       onSelectTab={(newSelectedTab) => setSelectedTab(newSelectedTab)}
     >
       <ToolGroup name={CAMERA_TAB_TYPE}>
         <>
-          <Flex row reverse style={{ padding: "4px 4px 0" }}>
+          <Stack direction="row-reverse" paddingTop={0.5} paddingRight={0.5}>
             <Button
-              className={styles.button}
+              className={classes.button}
               tooltip="Copy cameraState"
               small
               onClick={() => {
-                void clipboard.copy(JSON.stringify(cameraState, undefined, 2));
+                void clipboard.copy(JSON.stringify(cameraState, undefined, 2) ?? "");
               }}
             >
               Copy
             </Button>
             <Button
-              className={styles.button}
+              className={classes.button}
               disabled={isPlaying}
               tooltip={
                 isPlaying
@@ -177,14 +180,14 @@ export default function CameraInfo({
               {edit ? "Done" : "Edit"}
             </Button>
             <Button
-              className={styles.button}
+              className={classes.button}
               tooltip="Sync camera state across all 3D panels"
               onClick={syncCameraState}
             >
               Sync
             </Button>
-          </Flex>
-          <Flex col style={{ minWidth: DEFAULT_CAMERA_INFO_WIDTH, padding: 8 }}>
+          </Stack>
+          <Stack flex="auto" minWidth={DEFAULT_CAMERA_INFO_WIDTH} padding={1}>
             {edit && !isPlaying ? (
               <JsonInput
                 value={cameraState}
@@ -192,9 +195,9 @@ export default function CameraInfo({
                 dataValidator={cameraStateValidator}
               />
             ) : (
-              <Flex col>
+              <Stack flex="auto">
                 <CameraStateInfo cameraState={cameraState} onAlignXYAxis={onAlignXYAxis} />
-                <Flex col>
+                <Stack flex="auto">
                   <SRow style={{ marginBottom: 8 }}>
                     <Tooltip
                       placement="top"
@@ -261,7 +264,7 @@ export default function CameraInfo({
                       </SValue>
                     </SRow>
                   )}
-                </Flex>
+                </Stack>
                 {followMode === "no-follow" && <p>Not following</p>}
                 {followMode !== "no-follow" && (
                   <SRow>
@@ -272,9 +275,9 @@ export default function CameraInfo({
                     </SValue>
                   </SRow>
                 )}
-              </Flex>
+              </Stack>
             )}
-          </Flex>
+          </Stack>
         </>
       </ToolGroup>
     </ExpandingToolbar>

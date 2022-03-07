@@ -11,7 +11,11 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { IButtonStyles, IconButton, Stack, useTheme } from "@fluentui/react";
+import { IButtonStyles, IconButton, useTheme } from "@fluentui/react";
+import MyLocationIcon from "@mui/icons-material/MyLocation";
+import NavigationIcon from "@mui/icons-material/Navigation";
+import { Paper, IconButton as MuiIconButton, Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import { sortBy } from "lodash";
 import { memo, useCallback, useMemo, useRef } from "react";
 import shallowequal from "shallowequal";
@@ -107,7 +111,7 @@ const arePropsEqual = (prevProps: Props, nextProps: Props) => {
     // As a result of various refactors this code does not make sense anymore and is in need of
     // cleanup. An original version can be found at
     // https://github.com/cruise-automation/webviz/blob/7407ef1687e19615a43194c003aec6608c4f7c51/packages/webviz-core/src/panels/ThreeDimensionalViz/FollowTFControl.js#L113
-    const nodesWithoutDefaultFollowTfFrame = allNodes?.length;
+    const nodesWithoutDefaultFollowTfFrame = allNodes.length;
     if (nodesWithoutDefaultFollowTfFrame !== 0) {
       return false;
     }
@@ -115,9 +119,31 @@ const arePropsEqual = (prevProps: Props, nextProps: Props) => {
   return shallowequal(prevProps, nextProps);
 };
 
+type StyleProps = {
+  followTf?: Props["followTf"];
+};
+
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    pointerEvents: "auto",
+  },
+  row: {
+    display: "flex",
+    flexGrow: 1,
+    alignItems: "center",
+    // see also ExpandingToolbar styles
+    color: ({ followTf }: StyleProps) => (followTf ? undefined : theme.palette.text.disabled),
+    position: "relative",
+  },
+  icon: {
+    fontSize: "16px !important",
+  },
+}));
+
 const FollowTFControl = memo<Props>(function FollowTFControl(props: Props) {
   const { transforms, followTf, followMode, onFollowChange } = props;
   const theme = useTheme();
+  const classes = useStyles({ followTf });
 
   const iconButtonStyles = useMemo(
     (): Partial<IButtonStyles> => ({
@@ -188,7 +214,6 @@ const FollowTFControl = memo<Props>(function FollowTFControl(props: Props) {
     depth: 0,
   };
 
-  const followButton = useTooltip({ contents: followButtonTooltipContent });
   const frameListButton = useTooltip({ contents: "Select a frame to follow…" });
 
   // The control is active only if there are transform frames.
@@ -196,66 +221,56 @@ const FollowTFControl = memo<Props>(function FollowTFControl(props: Props) {
   const active = useMemo(() => transforms.frames().size > 0, [transforms]);
 
   return (
-    <Stack
-      horizontal
-      grow={1}
-      verticalAlign="center"
-      styles={{
-        root: {
-          // see also ExpandingToolbar styles
-          backgroundColor: theme.semanticColors.buttonBackgroundHovered,
-          borderRadius: theme.effects.roundedCorner2,
-          pointerEvents: "auto",
-          color: followTf ? undefined : theme.semanticColors.disabledText,
-          position: "relative",
-        },
-      }}
-    >
-      {active && (
-        <Autocomplete
-          ref={autocomplete}
-          items={allNodes}
-          getItemValue={treeNodeToTfId}
-          getItemText={getItemText}
-          selectedItem={selectedItem}
-          placeholder={followTf ?? "(empty)"}
-          onSelect={onSelectFrame}
-          sortWhenFiltering={false}
-          minWidth={0}
-          clearOnFocus
-          autoSize
-          menuStyle={{
-            // bump the menu down to reduce likelihood of it appearing while the mouse is
-            // already over it, which causes onMouseEnter not to be delivered correctly and
-            // breaks selection
-            marginTop: 4,
-          }}
-        />
-      )}
-      {frameListButton.tooltip}
-      {active && (
-        <IconButton
-          elementRef={frameListButton.ref}
-          onClick={openFrameList}
-          iconProps={{ iconName: "MenuDown" }}
-          styles={{
-            ...iconButtonStyles,
-            root: { width: 16 },
-          }}
-        />
-      )}
-      {followButton.tooltip}
-      <IconButton
-        disabled={!active}
-        checked={followMode !== "no-follow"}
-        elementRef={followButton.ref}
-        onClick={toggleFollowMode}
-        iconProps={{
-          iconName: followMode === "follow-orientation" ? "CompassOutline" : "CrosshairsGps",
-        }}
-        styles={iconButtonStyles}
-      />
-    </Stack>
+    <Paper className={classes.root} square={false} elevation={4}>
+      <div className={classes.row}>
+        {active && (
+          <Autocomplete
+            ref={autocomplete}
+            items={allNodes}
+            getItemValue={treeNodeToTfId}
+            getItemText={getItemText}
+            selectedItem={selectedItem}
+            placeholder={followTf ?? "(empty)"}
+            onSelect={onSelectFrame}
+            sortWhenFiltering={false}
+            minWidth={0}
+            clearOnFocus
+            autoSize
+            menuStyle={{
+              // bump the menu down to reduce likelihood of it appearing while the mouse is
+              // already over it, which causes onMouseEnter not to be delivered correctly and
+              // breaks selection
+              marginTop: 4,
+            }}
+          />
+        )}
+        {frameListButton.tooltip}
+        {active && (
+          <IconButton
+            elementRef={frameListButton.ref}
+            onClick={openFrameList}
+            iconProps={{ iconName: "MenuDown" }}
+            styles={{
+              ...iconButtonStyles,
+              root: { width: 16 },
+            }}
+          />
+        )}
+        <MuiIconButton
+          className={classes.icon}
+          disabled={!active}
+          title={followButtonTooltipContent}
+          color={followMode !== "no-follow" ? "info" : "inherit"}
+          onClick={toggleFollowMode}
+        >
+          {followMode === "follow-orientation" ? (
+            <NavigationIcon fontSize="inherit" />
+          ) : (
+            <MyLocationIcon fontSize="inherit" />
+          )}
+        </MuiIconButton>
+      </div>
+    </Paper>
   );
 }, arePropsEqual);
 

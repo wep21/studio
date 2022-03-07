@@ -1,7 +1,9 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
-import { ComboBox, IDropdownOption, Stack, Toggle } from "@fluentui/react";
+
+import { ComboBox, IDropdownOption, Toggle } from "@fluentui/react";
+import { makeStyles } from "@mui/styles";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useResizeDetector } from "react-resize-detector";
 
@@ -14,7 +16,6 @@ import {
 } from "@foxglove/regl-worldview";
 import * as PanelAPI from "@foxglove/studio-base/PanelAPI";
 import EmptyState from "@foxglove/studio-base/components/EmptyState";
-import Flex from "@foxglove/studio-base/components/Flex";
 import Panel from "@foxglove/studio-base/components/Panel";
 import PanelToolbar from "@foxglove/studio-base/components/PanelToolbar";
 import { useAssets } from "@foxglove/studio-base/context/AssetsContext";
@@ -50,7 +51,40 @@ const defaultConfig: Config = {
   opacity: 0.75,
 };
 
+const useStyles = makeStyles({
+  root: {
+    display: "flex",
+    flexDirection: "column",
+    flex: "auto",
+    overflow: "hidden",
+  },
+  toolbar: {
+    display: "flex",
+    flexGrow: 1,
+    alignItems: "baseline",
+  },
+  content: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+  },
+  viewer: {
+    display: "flex",
+    flex: "auto",
+    overflow: "hidden",
+  },
+  inner: {
+    flex: "auto",
+    position: "relative",
+  },
+  canvasWrapper: {
+    position: "absolute",
+    inset: 0,
+  },
+});
+
 function URDFViewer({ config, saveConfig }: Props) {
+  const classes = useStyles();
   const { customJointValues, jointStatesTopic, opacity } = config;
   const [canvas, setCanvas] = useState<HTMLCanvasElement | ReactNull>(ReactNull);
 
@@ -69,6 +103,7 @@ function URDFViewer({ config, saveConfig }: Props) {
   const [selectedAssetId, setSelectedAssetId] = useState<string | undefined>();
 
   const model = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     const asset = assets.find(({ type, uuid }) => uuid === selectedAssetId && type === "urdf");
     return asset?.model;
   }, [assets, selectedAssetId]);
@@ -79,6 +114,7 @@ function URDFViewer({ config, saveConfig }: Props) {
     const prevAssetIds = new Set(prevAssets.current?.map(({ uuid }) => uuid));
     prevAssets.current = assets;
     for (const asset of assets) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!prevAssetIds.has(asset.uuid) && asset.type === "urdf") {
         setSelectedAssetId(asset.uuid);
         return;
@@ -191,6 +227,7 @@ function URDFViewer({ config, saveConfig }: Props) {
 
   const assetOptions: IDropdownOption[] = useMemo(() => {
     const options = filterMap(assets, (asset) =>
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       asset.type === "urdf" ? { key: asset.uuid, text: asset.name } : undefined,
     );
     if (robotDescriptionAsset != undefined) {
@@ -200,9 +237,9 @@ function URDFViewer({ config, saveConfig }: Props) {
   }, [assets, robotDescriptionAsset]);
 
   return (
-    <Flex col clip>
+    <div className={classes.root}>
       <PanelToolbar helpContent={helpContent}>
-        <Stack grow horizontal verticalAlign="baseline">
+        <div className={classes.toolbar}>
           <Toggle
             inlineLabel
             offText="Manual joint control"
@@ -228,16 +265,16 @@ function URDFViewer({ config, saveConfig }: Props) {
               }}
             />
           )}
-        </Stack>
+        </div>
       </PanelToolbar>
-      <Stack verticalFill>
+      <div className={classes.content}>
         {messageBar}
         {model == undefined ? (
           <EmptyState>Drag and drop a URDF file to visualize it.</EmptyState>
         ) : (
-          <Flex row clip>
-            <div ref={resizeRef} style={{ flex: "1 1 auto", position: "relative" }}>
-              <div style={{ position: "absolute", inset: 0 }}>
+          <div className={classes.viewer}>
+            <div className={classes.inner} ref={resizeRef}>
+              <div className={classes.canvasWrapper}>
                 <CameraListener cameraStore={cameraStore} shiftKeys={true}>
                   <canvas ref={(el) => setCanvas(el)} width={width} height={height} />
                 </CameraListener>
@@ -262,17 +299,17 @@ function URDFViewer({ config, saveConfig }: Props) {
                 }}
               />
             </div>
-            {useCustomJointValues && model && (
+            {useCustomJointValues && (
               <JointValueSliders
                 model={model}
                 customJointValues={customJointValues}
                 onChange={setCustomJointValues}
               />
             )}
-          </Flex>
+          </div>
         )}
-      </Stack>
-    </Flex>
+      </div>
+    </div>
   );
 }
 

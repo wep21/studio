@@ -2,10 +2,12 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { Dialog, Stack, useTheme } from "@fluentui/react";
+import { Dialog, useTheme } from "@fluentui/react";
+import { Stack } from "@mui/material";
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { useMountedState } from "react-use";
 
+import { useDialogHostId } from "@foxglove/studio-base/context/DialogHostIdContext";
 import {
   IDataSourceFactory,
   usePlayerSelection,
@@ -32,6 +34,7 @@ export default function OpenDialog(props: OpenDialogProps): JSX.Element {
   const theme = useTheme();
 
   const openFile = useOpenFile(availableSources);
+  const hostId = useDialogHostId();
 
   const firstSampleSource = useMemo(() => {
     return availableSources.find((source) => source.type === "sample");
@@ -140,6 +143,7 @@ export default function OpenDialog(props: OpenDialogProps): JSX.Element {
           // We enable event bubbling so a user can drag&drop files or folders onto the app even when
           // the dialog is shown.
           eventBubblingEnabled: true,
+          hostId,
         },
         styles: {
           main: {
@@ -185,12 +189,7 @@ export default function OpenDialog(props: OpenDialogProps): JSX.Element {
         },
       }}
     >
-      <Stack
-        grow
-        verticalFill
-        verticalAlign="space-between"
-        tokens={{ childrenGap: theme.spacing.m }}
-      >
+      <Stack flexGrow={1} height="100%" justifyContent="space-between" spacing={2}>
         {view.component}
       </Stack>
     </Dialog>

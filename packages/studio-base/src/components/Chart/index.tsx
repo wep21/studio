@@ -19,6 +19,7 @@ import { RpcElement, RpcScales } from "@foxglove/studio-base/components/Chart/ty
 import ChartJsMux from "@foxglove/studio-base/components/Chart/worker/ChartJsMux";
 import Rpc, { createLinkedChannels } from "@foxglove/studio-base/util/Rpc";
 import WebWorkerManager from "@foxglove/studio-base/util/WebWorkerManager";
+import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 
 const log = Logger.getLogger(__filename);
 
@@ -61,7 +62,7 @@ type Props = {
   onHover?: (elements: RpcElement[]) => void;
 };
 
-const devicePixelRatio = window.devicePixelRatio ?? 1;
+const devicePixelRatio = mightActuallyBePartial(window).devicePixelRatio ?? 1;
 
 const webWorkerManager = new WebWorkerManager(makeChartJSWorker, 4);
 
@@ -174,6 +175,7 @@ function Chart(props: Props): JSX.Element {
     [isMounted],
   );
 
+  const hasPannedSinceMouseDown = useRef(false);
   const previousUpdateMessage = useRef<Record<string, unknown>>({});
 
   // getNewUpdateMessage returns an update message for the changed fields from the last
@@ -243,11 +245,11 @@ function Chart(props: Props): JSX.Element {
         {
           node: offscreenCanvas,
           type,
-          data: newUpdateMessage?.data,
-          options: newUpdateMessage?.options,
+          data: newUpdateMessage.data,
+          options: newUpdateMessage.options,
           devicePixelRatio,
-          width: newUpdateMessage?.width,
-          height: newUpdateMessage?.height,
+          width: newUpdateMessage.width,
+          height: newUpdateMessage.height,
         },
         [offscreenCanvas],
       );
@@ -286,6 +288,8 @@ function Chart(props: Props): JSX.Element {
     hammerManager.add(new Hammer.Pan({ threshold }));
 
     hammerManager.on("panstart", async (event) => {
+      hasPannedSinceMouseDown.current = true;
+
       if (!rpcSendRef.current) {
         return;
       }
@@ -376,6 +380,8 @@ function Chart(props: Props): JSX.Element {
 
   const onMouseDown = useCallback(
     async (event: React.MouseEvent<HTMLCanvasElement>) => {
+      hasPannedSinceMouseDown.current = false;
+
       if (!rpcSendRef.current) {
         return;
       }
@@ -407,19 +413,20 @@ function Chart(props: Props): JSX.Element {
   const { onHover } = props;
   const onMouseMove = useCallback(
     async (event: React.MouseEvent<HTMLCanvasElement>) => {
-      if (onHover && mousePresentRef.current) {
-        if (!rpcSendRef.current) {
-          return;
-        }
+      mousePresentRef.current = true; // The mouse must be present if we're getting this event.
 
-        const elements = await rpcSendRef.current<RpcElement[]>("getElementsAtEvent", {
-          event: rpcMouseEvent(event),
-        });
+      if (onHover == undefined || rpcSendRef.current == undefined) {
+        return;
+      }
 
-        if (!isMounted() || !mousePresentRef.current) {
-          return;
-        }
+      const elements = await rpcSendRef.current<RpcElement[]>("getElementsAtEvent", {
+        event: rpcMouseEvent(event),
+      });
 
+      // Check mouse presence again in case the mouse has left the canvas while we
+      // were waiting for the RPC call.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (isMounted() && mousePresentRef.current) {
         onHover(elements);
       }
     },
@@ -437,7 +444,12 @@ function Chart(props: Props): JSX.Element {
 
   const onClick = useCallback(
     async (event: React.MouseEvent<HTMLCanvasElement>): Promise<void> => {
-      if (!props.onClick || !rpcSendRef.current) {
+      if (
+        !props.onClick ||
+        !rpcSendRef.current ||
+        !isMounted() ||
+        hasPannedSinceMouseDown.current // Don't send click event if it was part of a pan gesture.
+      ) {
         return;
       }
 
@@ -450,10 +462,6 @@ function Chart(props: Props): JSX.Element {
       const datalabel = await rpcSendRef.current("getDatalabelAtEvent", {
         event: { x: mouseX, y: mouseY, type: "click" },
       });
-
-      if (!isMounted()) {
-        return;
-      }
 
       let xVal: number | undefined;
       let yVal: number | undefined;
@@ -472,7 +480,7 @@ function Chart(props: Props): JSX.Element {
         yVal = (range / pixels) * (mouseY - yScale.pixelMin) + yScale.min;
       }
 
-      props.onClick?.({
+      props.onClick({
         datalabel,
         x: xVal,
         y: yVal,

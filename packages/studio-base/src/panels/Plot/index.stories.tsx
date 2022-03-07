@@ -11,14 +11,15 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { shuffle } from "lodash";
 import { useCallback, useRef } from "react";
 
 import { parse as parseMessageDefinition } from "@foxglove/rosmsg";
 import { fromSec } from "@foxglove/rostime";
 import SchemaEditor from "@foxglove/studio-base/components/PanelSettings/SchemaEditor";
 import Plot, { PlotConfig } from "@foxglove/studio-base/panels/Plot";
-import { BlockCache } from "@foxglove/studio-base/randomAccessDataProviders/MemoryCacheDataProvider";
-import PanelSetup, { triggerWheel } from "@foxglove/studio-base/stories/PanelSetup";
+import { BlockCache } from "@foxglove/studio-base/players/types";
+import PanelSetup, { Fixture, triggerWheel } from "@foxglove/studio-base/stories/PanelSetup";
 import { useReadySignal } from "@foxglove/studio-base/stories/ReadySignalContext";
 import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
 
@@ -160,7 +161,7 @@ const otherStateMessages = [
   },
 ];
 
-const withEndTime = (testFixture: any, endTime: any) => ({
+const withEndTime = (testFixture: Fixture, endTime: any) => ({
   ...testFixture,
   activeData: { ...testFixture.activeData, endTime },
 });
@@ -254,6 +255,7 @@ const fixture = {
   topics: [
     { name: "/some_topic/location", datatype: "msgs/PoseDebug" },
     { name: "/some_topic/location_subset", datatype: "msgs/PoseDebug" },
+    { name: "/some_topic/location_shuffled", datatype: "msgs/PoseDebug" },
     { name: "/some_topic/state", datatype: "msgs/State" },
     { name: "/boolean_topic", datatype: "std_msgs/Bool" },
     { name: "/preloaded_topic", datatype: "nonstd_msgs/Float64Stamped" },
@@ -297,6 +299,17 @@ const fixture = {
         sizeInBytes: 0,
       },
     ],
+    // Shuffle the location messages so that they are out of stamp order
+    // This is used in the headerStamp series test to check that the dataset is sorted
+    // prior to rendering. If the dataset is not sorted properly, the plot is jumbled.
+    "/some_topic/location_shuffled": shuffle(
+      locationMessages.map((message) => ({
+        topic: "/some_topic/location_shuffled",
+        receiveTime: message.header.stamp,
+        message,
+        sizeInBytes: 0,
+      })),
+    ),
   },
   progress: { messageCache },
 };
@@ -325,7 +338,29 @@ const exampleConfig: PlotConfig = {
   xAxisVal: "timestamp",
   showLegend: true,
   isSynced: true,
+  legendDisplay: "floating",
+  showXAxisLabels: true,
+  showYAxisLabels: true,
+  showPlotValuesInLegend: false,
+  sidebarDimension: 0,
 };
+
+function PlotWrapper(props: {
+  style?: { [key: string]: string | number };
+  fixture?: Fixture;
+  pauseFrame: (_arg: string) => () => void;
+  config: PlotConfig;
+}): JSX.Element {
+  return (
+    <PanelSetup
+      fixture={props.fixture ?? fixture}
+      pauseFrame={props.pauseFrame}
+      style={{ ...props.style }}
+    >
+      <Plot overrideConfig={props.config} />
+    </PanelSetup>
+  );
+}
 
 export default {
   title: "panels/Plot",
@@ -339,11 +374,7 @@ LineGraph.storyName = "line graph";
 export function LineGraph(): JSX.Element {
   const readySignal = useReadySignal({ count: 3 });
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
-  return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot overrideConfig={exampleConfig} />
-    </PanelSetup>
-  );
+  return <PlotWrapper pauseFrame={pauseFrame} config={exampleConfig} />;
 }
 LineGraph.parameters = {
   useReadySignal: true,
@@ -353,11 +384,7 @@ LineGraphWithLegendsHidden.storyName = "line graph with legends hidden";
 export function LineGraphWithLegendsHidden(): JSX.Element {
   const readySignal = useReadySignal({ count: 3 });
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
-  return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot overrideConfig={{ ...exampleConfig, showLegend: false }} />
-    </PanelSetup>
-  );
+  return <PlotWrapper pauseFrame={pauseFrame} config={{ ...exampleConfig, showLegend: false }} />;
 }
 LineGraphWithLegendsHidden.parameters = {
   useReadySignal: true,
@@ -436,11 +463,7 @@ export function LineGraphAfterZoom(): JSX.Element {
     };
   }, [doZoom, readyState]);
 
-  return (
-    <PanelSetup pauseFrame={pauseFrame} fixture={fixture}>
-      <Plot overrideConfig={exampleConfig} />
-    </PanelSetup>
-  );
+  return <PlotWrapper pauseFrame={pauseFrame} config={exampleConfig} />;
 }
 LineGraphAfterZoom.parameters = {
   useReadySignal: true,
@@ -451,22 +474,22 @@ TimestampMethodHeaderStamp.storyName = "timestampMethod: headerStamp";
 export function TimestampMethodHeaderStamp(): JSX.Element {
   const readySignal = useReadySignal({ count: 3 });
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
+
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "headerStamp",
-            },
-            { value: "/boolean_topic.data", enabled: true, timestampMethod: "headerStamp" },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location_shuffled.pose.velocity",
+            enabled: true,
+            timestampMethod: "headerStamp",
+          },
+          { value: "/boolean_topic.data", enabled: true, timestampMethod: "headerStamp" },
+        ],
+      }}
+    />
   );
 }
 TimestampMethodHeaderStamp.parameters = {
@@ -479,20 +502,20 @@ export function LongPath(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame} style={{ maxWidth: 250 }}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      style={{ maxWidth: 250 }}
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+      }}
+    />
   );
 }
 LongPath.parameters = {
@@ -505,25 +528,24 @@ export function DisabledPath(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: false,
-              timestampMethod: "receiveTime",
-            },
-            {
-              value: "/some_topic/location.pose.acceleration",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: false,
+            timestampMethod: "receiveTime",
+          },
+          {
+            value: "/some_topic/location.pose.acceleration",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+      }}
+    />
   );
 }
 DisabledPath.parameters = {
@@ -536,21 +558,20 @@ export function ReferenceLine(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            { value: "0", enabled: true, timestampMethod: "receiveTime" }, // Test typing a period for decimal values. value: "1.", enabled: true, timestampMethod: "receiveTime",
-            { value: "1.", enabled: true, timestampMethod: "receiveTime" },
-            { value: "1.5", enabled: true, timestampMethod: "receiveTime" },
-            { value: "1", enabled: false, timestampMethod: "receiveTime" },
-          ],
-          minYValue: "-1",
-          maxYValue: "2",
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          { value: "0", enabled: true, timestampMethod: "receiveTime" }, // Test typing a period for decimal values. value: "1.", enabled: true, timestampMethod: "receiveTime",
+          { value: "1.", enabled: true, timestampMethod: "receiveTime" },
+          { value: "1.5", enabled: true, timestampMethod: "receiveTime" },
+          { value: "1", enabled: false, timestampMethod: "receiveTime" },
+        ],
+        minYValue: "-1",
+        maxYValue: "2",
+      }}
+    />
   );
 }
 ReferenceLine.parameters = {
@@ -563,22 +584,21 @@ export function WithMinAndMaxYValues(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          minYValue: "1",
-          maxYValue: "2.8",
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        minYValue: "1",
+        maxYValue: "2.8",
+      }}
+    />
   );
 }
 WithMinAndMaxYValues.parameters = {
@@ -591,21 +611,20 @@ export function WithJustMinYValueLessThanMinimumValue(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          minYValue: "1",
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        minYValue: "1",
+      }}
+    />
   );
 }
 WithJustMinYValueLessThanMinimumValue.parameters = {
@@ -618,21 +637,20 @@ export function WithJustMinYValueMoreThanMinimumValue(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          minYValue: "1.4",
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        minYValue: "1.4",
+      }}
+    />
   );
 }
 WithJustMinYValueMoreThanMinimumValue.parameters = {
@@ -645,21 +663,20 @@ export function WithJustMinYValueMoreThanMaximumValue(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          minYValue: "5",
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        minYValue: "5",
+      }}
+    />
   );
 }
 WithJustMinYValueMoreThanMaximumValue.parameters = {
@@ -672,21 +689,20 @@ export function WithJustMaxYValueLessThanMaximumValue(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          maxYValue: "1.8",
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        maxYValue: "1.8",
+      }}
+    />
   );
 }
 WithJustMaxYValueLessThanMaximumValue.parameters = {
@@ -699,21 +715,20 @@ export function WithJustMaxYValueMoreThanMaximumValue(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          maxYValue: "2.8",
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        maxYValue: "2.8",
+      }}
+    />
   );
 }
 WithJustMaxYValueMoreThanMaximumValue.parameters = {
@@ -726,21 +741,20 @@ export function WithJustMaxYValueLessThanMinimumValue(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          maxYValue: "1",
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        maxYValue: "1",
+      }}
+    />
   );
 }
 WithJustMaxYValueLessThanMinimumValue.parameters = {
@@ -754,26 +768,25 @@ export function ScatterPlotPlusLineGraphPlusReferenceLine(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/state.items[:].speed",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-            { value: "3", enabled: true, timestampMethod: "receiveTime" },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/state.items[:].speed",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+          { value: "3", enabled: true, timestampMethod: "receiveTime" },
+        ],
+      }}
+    />
   );
 }
 ScatterPlotPlusLineGraphPlusReferenceLine.parameters = {
@@ -786,22 +799,21 @@ export function IndexBasedXAxisForArray(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          xAxisVal: "index",
-          paths: [
-            {
-              value: "/some_topic/state.items[:].speed",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            }, // Should show up only in the legend: For now index plots always use playback data, and ignore preloaded data.
-            { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        xAxisVal: "index",
+        paths: [
+          {
+            value: "/some_topic/state.items[:].speed",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          }, // Should show up only in the legend: For now index plots always use playback data, and ignore preloaded data.
+          { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
+        ],
+      }}
+    />
   );
 }
 IndexBasedXAxisForArray.parameters = {
@@ -814,22 +826,21 @@ export function CustomXAxisTopic(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          xAxisVal: "custom",
-          paths: [
-            {
-              value: "/some_topic/location.pose.acceleration",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          xAxisPath: { value: "/some_topic/location.pose.velocity", enabled: true },
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        xAxisVal: "custom",
+        paths: [
+          {
+            value: "/some_topic/location.pose.acceleration",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        xAxisPath: { value: "/some_topic/location.pose.velocity", enabled: true },
+      }}
+    />
   );
 }
 CustomXAxisTopic.parameters = {
@@ -843,22 +854,21 @@ export function CurrentCustomXAxisTopic(): JSX.Element {
 
   // As above, but just shows a single point instead of the whole line.
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          xAxisVal: "currentCustom",
-          paths: [
-            {
-              value: "/some_topic/location.pose.acceleration",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          xAxisPath: { value: "/some_topic/location.pose.velocity", enabled: true },
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        xAxisVal: "currentCustom",
+        paths: [
+          {
+            value: "/some_topic/location.pose.acceleration",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        xAxisPath: { value: "/some_topic/location.pose.velocity", enabled: true },
+      }}
+    />
   );
 }
 CurrentCustomXAxisTopic.parameters = {
@@ -872,33 +882,32 @@ export function CustomXAxisTopicWithMismatchedDataLengths(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          xAxisVal: "custom",
-          paths: [
-            // Extra items in y-axis
-            {
-              value: "/some_topic/location.pose.acceleration",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            }, // Same number of items
-            {
-              value: "/some_topic/location_subset.pose.acceleration",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            }, // Fewer items in y-axis
-            {
-              value: "/some_topic/state.items[:].speed",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          xAxisPath: { value: "/some_topic/location_subset.pose.velocity", enabled: true },
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        xAxisVal: "custom",
+        paths: [
+          // Extra items in y-axis
+          {
+            value: "/some_topic/location.pose.acceleration",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          }, // Same number of items
+          {
+            value: "/some_topic/location_subset.pose.acceleration",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          }, // Fewer items in y-axis
+          {
+            value: "/some_topic/state.items[:].speed",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        xAxisPath: { value: "/some_topic/location_subset.pose.velocity", enabled: true },
+      }}
+    />
   );
 }
 CustomXAxisTopicWithMismatchedDataLengths.parameters = {
@@ -911,7 +920,7 @@ export function SuperCloseValues(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup
+    <PlotWrapper
       pauseFrame={pauseFrame}
       fixture={{
         datatypes: new Map(
@@ -945,14 +954,11 @@ export function SuperCloseValues(): JSX.Element {
           ],
         },
       }}
-    >
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [{ value: "/some_number.data", enabled: true, timestampMethod: "receiveTime" }],
-        }}
-      />
-    </PanelSetup>
+      config={{
+        ...exampleConfig,
+        paths: [{ value: "/some_number.data", enabled: true, timestampMethod: "receiveTime" }],
+      }}
+    />
   );
 }
 SuperCloseValues.parameters = {
@@ -965,22 +971,21 @@ export function TimeValues(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup fixture={fixture} pauseFrame={pauseFrame}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          xAxisVal: "custom",
-          paths: [
-            {
-              value: "/some_topic/location.pose.velocity",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-          xAxisPath: { value: "/some_topic/location.header.stamp", enabled: true },
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{
+        ...exampleConfig,
+        xAxisVal: "custom",
+        paths: [
+          {
+            value: "/some_topic/location.pose.velocity",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+        xAxisPath: { value: "/some_topic/location.header.stamp", enabled: true },
+      }}
+    />
   );
 }
 TimeValues.parameters = {
@@ -993,17 +998,17 @@ export function PreloadedDataInBinaryBlocks(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup pauseFrame={pauseFrame} fixture={withEndTime(fixture, { sec: 2, nsec: 0 })}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
-            { value: "/preloaded_topic.data", enabled: true, timestampMethod: "headerStamp" },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      fixture={withEndTime(fixture, { sec: 2, nsec: 0 })}
+      config={{
+        ...exampleConfig,
+        paths: [
+          { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
+          { value: "/preloaded_topic.data", enabled: true, timestampMethod: "headerStamp" },
+        ],
+      }}
+    />
   );
 }
 PreloadedDataInBinaryBlocks.parameters = {
@@ -1016,21 +1021,21 @@ export function MixedStreamedAndPreloadedData(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup pauseFrame={pauseFrame} fixture={withEndTime(fixture, { sec: 3, nsec: 0 })}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            {
-              value: "/some_topic/state.items[0].speed",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-            { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      fixture={withEndTime(fixture, { sec: 3, nsec: 0 })}
+      config={{
+        ...exampleConfig,
+        paths: [
+          {
+            value: "/some_topic/state.items[0].speed",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+          { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
+        ],
+      }}
+    />
   );
 }
 MixedStreamedAndPreloadedData.parameters = {
@@ -1043,21 +1048,21 @@ export function PreloadedDataAndItsDerivative(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup pauseFrame={pauseFrame} fixture={withEndTime(fixture, { sec: 2, nsec: 0 })}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
-            {
-              value: "/preloaded_topic.data.@derivative",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      fixture={withEndTime(fixture, { sec: 2, nsec: 0 })}
+      config={{
+        ...exampleConfig,
+        paths: [
+          { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
+          {
+            value: "/preloaded_topic.data.@derivative",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+      }}
+    />
   );
 }
 PreloadedDataAndItsDerivative.parameters = {
@@ -1070,21 +1075,21 @@ export function PreloadedDataAndItsNegative(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup pauseFrame={pauseFrame} fixture={withEndTime(fixture, { sec: 2, nsec: 0 })}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
-            {
-              value: "/preloaded_topic.data.@negative",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      fixture={withEndTime(fixture, { sec: 2, nsec: 0 })}
+      config={{
+        ...exampleConfig,
+        paths: [
+          { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
+          {
+            value: "/preloaded_topic.data.@negative",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+      }}
+    />
   );
 }
 PreloadedDataAndItsNegative.parameters = {
@@ -1097,21 +1102,21 @@ export function PreloadedDataAndItsAbsoluteValue(): JSX.Element {
   const pauseFrame = useCallback(() => readySignal, [readySignal]);
 
   return (
-    <PanelSetup pauseFrame={pauseFrame} fixture={withEndTime(fixture, { sec: 2, nsec: 0 })}>
-      <Plot
-        overrideConfig={{
-          ...exampleConfig,
-          paths: [
-            { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
-            {
-              value: "/preloaded_topic.data.@abs",
-              enabled: true,
-              timestampMethod: "receiveTime",
-            },
-          ],
-        }}
-      />
-    </PanelSetup>
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      fixture={withEndTime(fixture, { sec: 2, nsec: 0 })}
+      config={{
+        ...exampleConfig,
+        paths: [
+          { value: "/preloaded_topic.data", enabled: true, timestampMethod: "receiveTime" },
+          {
+            value: "/preloaded_topic.data.@abs",
+            enabled: true,
+            timestampMethod: "receiveTime",
+          },
+        ],
+      }}
+    />
   );
 }
 PreloadedDataAndItsAbsoluteValue.parameters = {

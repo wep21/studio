@@ -11,7 +11,9 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { Stack, Text, useTheme, Checkbox, Link } from "@fluentui/react";
+import { Text, useTheme, Checkbox, Link } from "@fluentui/react";
+import { Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 
 import { AppSetting } from "@foxglove/studio-base/AppSetting";
 import { useAppConfigurationValue } from "@foxglove/studio-base/hooks/useAppConfigurationValue";
@@ -21,6 +23,26 @@ type Feature = {
   name: string;
   description: JSX.Element;
 };
+
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2),
+  },
+  item: {
+    display: "flex",
+    flexDirection: "column",
+    flexGrow: 1,
+    gap: theme.spacing(0.5),
+  },
+  label: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(0.5),
+    paddingLeft: theme.spacing(0.5),
+  },
+}));
 
 const features: Feature[] = [
   {
@@ -42,11 +64,6 @@ const features: Feature[] = [
     key: AppSetting.ENABLE_LEGACY_PLOT_PANEL,
     name: "Legacy Plot panel",
     description: <>Enable the Legacy Plot panel.</>,
-  },
-  {
-    key: AppSetting.ENABLE_MCAP_DATA_SOURCE,
-    name: "MCAP data source",
-    description: <>Enable the MCAP data source.</>,
   },
 ];
 if (process.env.NODE_ENV === "development") {
@@ -71,33 +88,27 @@ if (process.env.NODE_ENV === "development") {
 }
 
 function ExperimentalFeatureItem(props: { feature: Feature }) {
+  const classes = useStyles();
   const theme = useTheme();
   const { feature } = props;
 
   const [enabled, setEnabled] = useAppConfigurationValue<boolean>(feature.key);
   return (
-    <Stack grow tokens={{ childrenGap: theme.spacing.s2 }}>
+    <div className={classes.item}>
       <Checkbox
         onRenderLabel={() => {
           return (
-            <Stack
-              tokens={{ childrenGap: theme.spacing.s2 }}
-              styles={{ root: { paddingLeft: theme.spacing.s2 } }}
-            >
+            <div className={classes.label}>
               <Text variant="medium" styles={{ root: { fontWeight: 600 } }}>
                 {feature.name}
               </Text>
               <Text
                 variant="smallPlus"
-                styles={{
-                  root: {
-                    color: theme.semanticColors.bodySubtext,
-                  },
-                }}
+                styles={{ root: { color: theme.semanticColors.bodySubtext } }}
               >
                 {feature.description}
               </Text>
-            </Stack>
+            </div>
           );
         }}
         checked={enabled}
@@ -109,14 +120,15 @@ function ExperimentalFeatureItem(props: { feature: Feature }) {
           label: { alignItems: "baseline" },
         }}
       />
-    </Stack>
+    </div>
   );
 }
 
 export function ExperimentalFeatureSettings(): React.ReactElement {
-  const theme = useTheme();
+  const classes = useStyles();
+
   return (
-    <Stack tokens={{ childrenGap: theme.spacing.m }}>
+    <div className={classes.root}>
       {features.length === 0 && (
         <p>
           <em>Currently there are no experimental features.</em>
@@ -125,6 +137,6 @@ export function ExperimentalFeatureSettings(): React.ReactElement {
       {features.map((feature) => (
         <ExperimentalFeatureItem key={feature.key} feature={feature} />
       ))}
-    </Stack>
+    </div>
   );
 }

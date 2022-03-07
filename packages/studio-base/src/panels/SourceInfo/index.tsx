@@ -2,15 +2,9 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import {
-  ITextStyles,
-  DetailsList,
-  makeStyles,
-  Stack,
-  Text,
-  useTheme,
-  CheckboxVisibility,
-} from "@fluentui/react";
+import { ITextStyles, DetailsList, Text, useTheme, CheckboxVisibility } from "@fluentui/react";
+import { Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import { useCallback, useMemo } from "react";
 
 import { subtract as subtractTimes, toSec } from "@foxglove/rostime";
@@ -25,20 +19,32 @@ import Timestamp from "@foxglove/studio-base/components/Timestamp";
 
 import helpContent from "./index.help.md";
 
-const useStyles = makeStyles(() => ({
-  container: {
-    overflowX: "hidden",
-    overflowY: "auto",
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    overflow: "hidden auto",
+  },
+  header: {
+    display: "flex",
+    flexDirection: "column",
+    borderBottom: `2px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
+    padding: theme.spacing(1.5),
+    gap: theme.spacing(1),
+  },
+  row: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(0.5),
   },
 }));
 
 function SourceInfo() {
+  const classes = useStyles();
   const topics = useMessagePipeline(useCallback((ctx) => ctx.playerState.activeData?.topics, []));
   const startTime = useMessagePipeline(
     useCallback((ctx) => ctx.playerState.activeData?.startTime, []),
   );
   const endTime = useMessagePipeline(useCallback((ctx) => ctx.playerState.activeData?.endTime, []));
-  const classes = useStyles();
   const theme = useTheme();
   const subheaderStyles = useMemo(
     () =>
@@ -75,43 +81,42 @@ function SourceInfo() {
   return (
     <>
       <PanelToolbar helpContent={helpContent} floating />
-      <div className={classes.container}>
-        <Stack
-          styles={{
-            root: {
-              borderBottom: `2px solid ${theme.semanticColors.bodyDivider}`,
-              backgroundColor: theme.semanticColors.bodyBackground,
-            },
-          }}
-          tokens={{ padding: 12, childrenGap: theme.spacing.s1 }}
-        >
-          <Stack tokens={{ childrenGap: theme.spacing.s2 }}>
+      <div className={classes.root}>
+        <header className={classes.header}>
+          <div className={classes.row}>
             <Text styles={subheaderStyles}>Start time</Text>
             <Timestamp horizontal time={startTime} />
-          </Stack>
-          <Stack tokens={{ childrenGap: theme.spacing.s2 }}>
+          </div>
+          <div className={classes.row}>
             <Text styles={subheaderStyles}>End Time</Text>
             <Timestamp horizontal time={endTime} />
-          </Stack>
-          <Stack tokens={{ childrenGap: theme.spacing.s2 }}>
+          </div>
+          <div className={classes.row}>
             <Text styles={subheaderStyles}>Duration</Text>
             <Duration duration={duration} />
-          </Stack>
-        </Stack>
+          </div>
+        </header>
+
         <DetailsList
           compact
           checkboxVisibility={CheckboxVisibility.hidden}
           disableSelectionZone
           enableUpdateAnimations={false}
-          isHeaderVisible={false}
           items={detailListItems}
+          styles={{
+            root: {
+              ".ms-DetailsHeader": { paddingTop: 0, height: 32, lineHeight: 32 },
+              ".ms-DetailsHeader-cell": { height: 32 },
+              ".ms-DetailsHeader-cellName": { ...theme.fonts.smallPlus, fontWeight: "bold" },
+            },
+          }}
           columns={[
             {
               key: "name",
-              name: "topic name",
+              name: "Topic name",
               fieldName: "name",
-              minWidth: 100,
-              maxWidth: 500,
+              minWidth: 0,
+              isResizable: true,
               data: "string",
               isPadded: true,
               onRender: (topic) => (
@@ -126,10 +131,10 @@ function SourceInfo() {
             },
             {
               key: "datatype",
-              name: "datatype",
+              name: "Datatype",
               fieldName: "datatype",
-              minWidth: 100,
-              maxWidth: 500,
+              minWidth: 0,
+              isResizable: true,
               data: "string",
               isPadded: true,
               onRender: (topic) => (
@@ -144,20 +149,19 @@ function SourceInfo() {
             },
             {
               key: "numMessages",
-              name: "message count",
+              name: "Message count",
               fieldName: "numMessages",
               minWidth: 0,
-              data: "number",
-              isPadded: true,
+              onRender: (topic) => topic.numMessages?.toLocaleString() ?? "–",
             },
             {
               key: "frequency",
-              name: "frequency",
+              name: "Frequency",
               minWidth: 0,
               onRender: (topic) =>
                 topic.numMessages != undefined
                   ? `${(topic.numMessages / toSec(duration)).toFixed(2)} Hz`
-                  : "",
+                  : "–",
             },
           ]}
         />

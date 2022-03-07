@@ -11,21 +11,22 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { Link, Spinner, SpinnerSize, Stack } from "@fluentui/react";
+import { useTheme, Link, Spinner, SpinnerSize } from "@fluentui/react";
 import ArrowLeftIcon from "@mdi/svg/svg/arrow-left.svg";
 import PlusIcon from "@mdi/svg/svg/plus.svg";
+import { Box, Stack } from "@mui/material";
 import { Suspense } from "react";
 import styled from "styled-components";
 import { v4 as uuidv4 } from "uuid";
 
 import Button from "@foxglove/studio-base/components/Button";
-import Flex from "@foxglove/studio-base/components/Flex";
 import Icon from "@foxglove/studio-base/components/Icon";
 import { LegacyInput } from "@foxglove/studio-base/components/LegacyStyledComponents";
 import Panel from "@foxglove/studio-base/components/Panel";
 import PanelToolbar from "@foxglove/studio-base/components/PanelToolbar";
 import TextContent from "@foxglove/studio-base/components/TextContent";
 import {
+  LayoutState,
   useCurrentLayoutActions,
   useCurrentLayoutSelector,
 } from "@foxglove/studio-base/context/CurrentLayoutContext";
@@ -47,20 +48,38 @@ const Editor = React.lazy(
   async () => await import("@foxglove/studio-base/panels/NodePlayground/Editor"),
 );
 
-const skeletonBody = `import { Input, Messages } from "ros";
+const skeletonBody = `\
+// The ./types module provides helper types for your Input events and messages.
+import { Input, Message } from "./types";
 
-type Output = {};
-type GlobalVariables = { id: number };
-
-export const inputs = [];
-export const output = "${DEFAULT_STUDIO_NODE_PREFIX}";
-
-// Populate 'Input' with a parameter to properly type your inputs, e.g. 'Input<"/your_input_topic">'
-const publisher = (message: Input<>, globalVars: GlobalVariables): Output => {
-  return {};
+// Your node can output well-known message types, any of your custom message types, or
+// complete custom message types.
+//
+// Use \`Message\` to access your data source types or well-known types:
+// type Twist = Message<"geometry_msgs/Twist">;
+//
+// Conventionally, it's common to make a _type alias_ for your node's output type
+// and use that type name as the return type for your node function.
+// Here we've called the type \`Output\` but you can pick any type name.
+type Output = {
+  hello: string;
 };
 
-export default publisher;`;
+// These are the topics your node "subscribes" to. Studio will invoke your node function
+// when any message is received on one of these topics.
+export const inputs = ["/input/topic"];
+
+// Any output your node produces is "published" to this topic. Published messages are only visible within Studio, not to your original data source.
+export const output = "/studio_node/output_topic";
+
+// This function is called with messages from your input topics.
+// The first argument is an event with the topic, receive time, and message.
+// Use the \`Input<...>\` helper to get the correct event type for your input topic messages.
+export default function node(event: Input<"/input/topic">): Output {
+  return {
+    hello: "world!",
+  };
+};`;
 
 type Props = {
   config: Config;
@@ -126,20 +145,20 @@ const WelcomeScreen = ({ addNewNode }: { addNewNode: (code?: string) => void }) 
 
 const EMPTY_USER_NODES: UserNodes = Object.freeze({});
 
+const userNodeSelector = (state: LayoutState) =>
+  state.selectedLayout?.data?.userNodes ?? EMPTY_USER_NODES;
+
 function NodePlayground(props: Props) {
   const { config, saveConfig } = props;
   const { autoFormatOnSave = false, selectedNodeId, editorForStorybook } = config;
 
+  const theme = useTheme();
   const [explorer, updateExplorer] = React.useState<Explorer>(undefined);
 
-  const userNodes = useCurrentLayoutSelector(
-    (state) => state.selectedLayout?.data?.userNodes ?? EMPTY_USER_NODES,
-  );
+  const userNodes = useCurrentLayoutSelector(userNodeSelector);
   const {
-    state: { nodeStates: userNodeDiagnostics, rosLib },
+    state: { nodeStates: userNodeDiagnostics, rosLib, typesLib },
   } = useUserNodeState();
-  // const userNodeDiagnostics = useSelector((state: any) => state.userNodes.userNodeDiagnostics);
-  // const rosLib = useSelector((state: State) => state.userNodes.rosLib);
 
   const { setUserNodes } = useCurrentLayoutActions();
 
@@ -154,18 +173,18 @@ function NodePlayground(props: Props) {
   const isCurrentScriptSelectedNode =
     !!selectedNode && !!currentScript && currentScript.filePath === selectedNode.name;
   const isNodeSaved =
-    !isCurrentScriptSelectedNode || currentScript?.code === selectedNode?.sourceCode;
+    !isCurrentScriptSelectedNode || currentScript.code === selectedNode.sourceCode;
   const selectedNodeLogs =
     (selectedNodeId != undefined ? userNodeDiagnostics[selectedNodeId]?.logs : undefined) ?? [];
 
   const inputTitle = currentScript
     ? currentScript.filePath + (currentScript.readOnly ? " (READONLY)" : "")
     : "node name";
+
   const inputStyle = {
     borderRadius: 0,
     margin: 0,
-    backgroundColor: colors.DARK2,
-    color: colors.LIGHT2,
+    backgroundColor: theme.semanticColors.bodyBackground,
     padding: "4px 20px",
     width: `${inputTitle.length + 4}ch`, // Width based on character count of title + padding
   };
@@ -184,7 +203,6 @@ function NodePlayground(props: Props) {
     (code?: string) => {
       const newNodeId = uuidv4();
       const sourceCode = code ?? skeletonBody;
-      // TODO: Add integration test for this flow.
       setUserNodes({
         [newNodeId]: {
           sourceCode,
@@ -226,8 +244,8 @@ function NodePlayground(props: Props) {
       // update code at top of backstack
       const backStack = [...scriptBackStack];
       if (backStack.length > 0) {
-        const script = backStack.pop()!;
-        if (!(script?.readOnly ?? false)) {
+        const script = backStack.pop();
+        if (script && !script.readOnly) {
           setScriptBackStack([...backStack, { ...script, code }]);
         }
       }
@@ -236,9 +254,9 @@ function NodePlayground(props: Props) {
   );
 
   return (
-    <Stack verticalFill>
+    <Stack height="100%">
       <PanelToolbar floating helpContent={helpContent} />
-      <Stack horizontal verticalFill>
+      <Stack direction="row" height="100%">
         <Sidebar
           explorer={explorer}
           updateExplorer={updateExplorer}
@@ -266,15 +284,8 @@ function NodePlayground(props: Props) {
           setScriptOverride={setScriptOverride}
           addNewNode={addNewNode}
         />
-        <Stack grow verticalFill style={{ overflow: "hidden" }}>
-          <Flex
-            start
-            style={{
-              flexGrow: 0,
-              backgroundColor: colors.DARK1,
-              alignItems: "center",
-            }}
-          >
+        <Stack flexGrow={1} height="100%" overflow="hidden">
+          <Stack direction="row" alignItems="center" bgcolor={theme.palette.neutralLighterAlt}>
             {scriptBackStack.length > 1 && (
               <Icon
                 size="large"
@@ -315,11 +326,11 @@ function NodePlayground(props: Props) {
             >
               <PlusIcon />
             </Icon>
-          </Flex>
+          </Stack>
 
-          <Stack grow style={{ overflow: "hidden " }}>
+          <Stack flexGrow={1} overflow="hidden ">
             {selectedNodeId == undefined && <WelcomeScreen addNewNode={addNewNode} />}
-            <div
+            <Box
               style={{
                 flexGrow: 1,
                 width: "100%",
@@ -330,9 +341,16 @@ function NodePlayground(props: Props) {
             >
               <Suspense
                 fallback={
-                  <Flex center style={{ width: "100%", height: "100%" }}>
+                  <Stack
+                    direction="row"
+                    flex="auto"
+                    alignItems="center"
+                    justifyContent="center"
+                    width="100%"
+                    height="100%"
+                  >
                     <Spinner size={SpinnerSize.large} />
-                  </Flex>
+                  </Stack>
                 }
               >
                 {editorForStorybook ?? (
@@ -342,11 +360,12 @@ function NodePlayground(props: Props) {
                     setScriptCode={setScriptCode}
                     setScriptOverride={setScriptOverride}
                     rosLib={rosLib}
+                    typesLib={typesLib}
                     save={saveNode}
                   />
                 )}
               </Suspense>
-            </div>
+            </Box>
             <Stack>
               <BottomBar
                 nodeId={selectedNodeId}

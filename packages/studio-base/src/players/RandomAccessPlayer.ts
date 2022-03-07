@@ -274,6 +274,7 @@ export default class RandomAccessPlayer implements Player {
         }, SEEK_START_DELAY_MS);
       })
       .catch((error: Error) => {
+        log.error(error);
         this._setError(`Error initializing player: ${error.message}`, error);
       });
   }
@@ -420,6 +421,7 @@ export default class RandomAccessPlayer implements Player {
 
     // if we paused while reading then do not emit messages
     // and exit the read loop
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!this._isPlaying) {
       return;
     }
@@ -456,10 +458,17 @@ export default class RandomAccessPlayer implements Player {
     if (!this.hasCachedRange(start, end)) {
       this._metricsCollector.recordUncachedRangeRequest();
     }
-    const messages = await this._provider.getMessages(start, end, {
+    const { parsedMessages, problems } = await this._provider.getMessages(start, end, {
       parsedMessages: parsedTopics,
     });
-    const { parsedMessages } = messages;
+    if (problems) {
+      for (const problem of problems) {
+        // The data provider getMessages() API does not provide a way to replace or clear problems,
+        // so we give each one a unique id. If this becomes annoying to users we can consider adding
+        // a way to manually or automatically clear out the list.
+        this._problems.set(uuidv4(), problem);
+      }
+    }
     if (parsedMessages == undefined) {
       this._problems.set("bad-messages", {
         severity: "error",
@@ -609,6 +618,7 @@ export default class RandomAccessPlayer implements Player {
     // started loading them. Note that for the latter part just checking for `isPlaying`
     // is not enough because the user might have started playback and then paused again!
     // Therefore we really need something like `this._cancelSeekBackfill`.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!this._cancelSeekBackfill) {
       // similar to _tick(), we set the next start time past where we have read
       // this happens after reading and confirming that playback or other seeking hasn't happened

@@ -6,8 +6,10 @@ import { createContext, useCallback, useLayoutEffect, useReducer, useRef, useSta
 import { getLeaves } from "react-mosaic-component";
 
 import { useShallowMemo } from "@foxglove/hooks";
+import Logger from "@foxglove/log";
 import { selectWithUnstableIdentityWarning } from "@foxglove/studio-base/hooks/selectWithUnstableIdentityWarning";
 import useGuaranteedContext from "@foxglove/studio-base/hooks/useGuaranteedContext";
+import useShouldNotChangeOften from "@foxglove/studio-base/hooks/useShouldNotChangeOften";
 import { LinkedGlobalVariables } from "@foxglove/studio-base/panels/ThreeDimensionalViz/Interactions/useLinkedGlobalVariables";
 import toggleSelectedPanel from "@foxglove/studio-base/providers/CurrentLayoutProvider/toggleSelectedPanel";
 import { LayoutID } from "@foxglove/studio-base/services/ILayoutStorage";
@@ -100,6 +102,8 @@ export type SelectedPanelActions = {
   togglePanelSelected: (panelId: string, containingTabId: string | undefined) => void;
 };
 
+const log = Logger.getLogger(__filename);
+
 const CurrentLayoutContext = createContext<ICurrentLayout | undefined>(undefined);
 CurrentLayoutContext.displayName = "CurrentLayoutContext";
 
@@ -112,6 +116,13 @@ export function useCurrentLayoutActions(): CurrentLayoutActions {
 export function useCurrentLayoutSelector<T>(selector: (layoutState: LayoutState) => T): T {
   const currentLayout = useGuaranteedContext(CurrentLayoutContext);
   const [_, forceUpdate] = useReducer((x: number) => x + 1, 0);
+
+  // Catch locations using unstable function selectors
+  useShouldNotChangeOften(selector, () =>
+    log.warn(
+      "useCurrentLayoutSelector is changing frequently. Rewrite your selector as a stable function.",
+    ),
+  );
 
   const state = useRef<{ value: T; selector: typeof selector } | undefined>(undefined);
   if (!state.current || selector !== state.current.selector) {

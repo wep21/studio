@@ -14,7 +14,6 @@
 import ts from "typescript/lib/typescript";
 
 import { RosMsgField } from "@foxglove/rosmsg";
-import baseDatatypes from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/typescript/baseDatatypes";
 import {
   noFuncError,
   nonFuncError,
@@ -30,7 +29,6 @@ import {
   noTuples,
   limitedUnionsError,
   noNestedAny,
-  invalidIndexedAccessError,
 } from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/typescript/errors";
 import {
   DiagnosticSeverity,
@@ -39,6 +37,7 @@ import {
   Diagnostic,
 } from "@foxglove/studio-base/players/UserNodePlayer/types";
 import type { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
+import { basicDatatypes } from "@foxglove/studio-base/util/datatypes";
 
 type TypeParam = {
   parent?: TypeParam;
@@ -99,6 +98,7 @@ const findImportedTypeDeclaration = (
   }
 
   const declaredType = checker.getDeclaredTypeOfSymbol(symbol);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   return findDeclaration(declaredType.symbol ?? declaredType.aliasSymbol, kind);
 };
 
@@ -189,154 +189,66 @@ export const findDefaultExportFunction = (
 };
 
 export const findReturnType = (
-  checker: ts.TypeChecker,
-  depth: number = 1,
+  typeChecker: ts.TypeChecker,
   node: ts.Node,
 ): ts.TypeLiteralNode | ts.InterfaceDeclaration => {
-  if (depth > MAX_DEPTH) {
-    throw new Error(`Max AST traversal depth exceeded ${MAX_DEPTH}.`);
+  const resolveType = typeChecker.getTypeAtLocation(node);
+
+  const signatures = resolveType.getCallSignatures();
+  const signature = signatures[0];
+  if (signatures.length !== 1 || !signature) {
+    throw new DatatypeExtractionError(nonFuncError);
   }
 
-  const visitNext = findReturnType.bind(undefined, checker, depth + 1);
+  const fullReturnType = typeChecker.getReturnTypeOfSignature(signature);
+  const nonNullable = fullReturnType.getNonNullableType();
 
-  switch (node.kind) {
-    case ts.SyntaxKind.TypeLiteral:
-      return node as ts.TypeLiteralNode;
-    case ts.SyntaxKind.InterfaceDeclaration:
-      return node as ts.InterfaceDeclaration;
-    case ts.SyntaxKind.ArrowFunction: {
-      const nextNode = findChild(node, [
-        ts.SyntaxKind.TypeReference,
-        ts.SyntaxKind.TypeLiteral,
-        ts.SyntaxKind.IntersectionType, // Unhandled type--let next recursive call handle error.
-        ts.SyntaxKind.UnionType,
-        ts.SyntaxKind.IndexedAccessType,
-      ]);
-      if (nextNode) {
-        return visitNext(nextNode);
-      }
-      throw new DatatypeExtractionError(badTypeReturnError);
-    }
-    case ts.SyntaxKind.Identifier: {
-      const symbol = checker.getSymbolAtLocation(node);
-      if (!symbol?.valueDeclaration) {
-        throw new DatatypeExtractionError(nonFuncError);
-      }
-      return visitNext(symbol.valueDeclaration);
-    }
-    case ts.SyntaxKind.VariableDeclaration: {
-      const nextNode = findChild(node, [ts.SyntaxKind.TypeReference, ts.SyntaxKind.ArrowFunction]);
-      if (!nextNode) {
-        throw new DatatypeExtractionError(nonFuncError);
-      }
-      return visitNext(nextNode);
-    }
-    case ts.SyntaxKind.TypeReference: {
-      const typeRef = node as ts.TypeReferenceNode;
-      const symbol = checker.getSymbolAtLocation(typeRef.typeName);
-      if (!symbol) {
-        throw new DatatypeExtractionError(badTypeReturnError);
-      }
-      const nextNode = findDeclaration(symbol, [
-        ts.SyntaxKind.TypeAliasDeclaration,
-        ts.SyntaxKind.InterfaceDeclaration,
-        ts.SyntaxKind.ClassDeclaration,
-        ts.SyntaxKind.ImportSpecifier,
-      ]);
-      if (!nextNode) {
-        throw new DatatypeExtractionError(badTypeReturnError);
-      }
-      return visitNext(nextNode);
-    }
-    case ts.SyntaxKind.FunctionDeclaration: {
-      const nextNode = findChild(node, [ts.SyntaxKind.TypeReference, ts.SyntaxKind.TypeLiteral]);
-      if (!nextNode) {
-        throw new DatatypeExtractionError(badTypeReturnError);
-      }
-      return visitNext(nextNode);
-    }
-    case ts.SyntaxKind.FunctionType: {
-      return visitNext((node as ts.FunctionTypeNode).type);
-    }
-    case ts.SyntaxKind.TypeAliasDeclaration: {
-      return visitNext((node as ts.TypeAliasDeclaration).type);
-    }
-    case ts.SyntaxKind.ImportSpecifier: {
-      const declaration = findImportedTypeDeclaration(checker, node, [
-        ts.SyntaxKind.TypeLiteral,
-        ts.SyntaxKind.InterfaceDeclaration,
-      ]);
-      if (!declaration) {
-        throw new DatatypeExtractionError(badTypeReturnError);
-      }
-      return visitNext(declaration);
-    }
-
-    case ts.SyntaxKind.IndexedAccessType: {
-      const indexedNode = node as ts.IndexedAccessTypeNode;
-      const declaration = visitNext(indexedNode.objectType);
-
-      if (!ts.isLiteralTypeNode(indexedNode.indexType)) {
-        throw new DatatypeExtractionError({
-          ...invalidIndexedAccessError,
-          message: "Indexed access is only allowed with string literal indexes",
-        });
-      }
-      if (!ts.isStringLiteral(indexedNode.indexType.literal)) {
-        throw new DatatypeExtractionError({
-          ...invalidIndexedAccessError,
-          message: "Indexed access is only allowed with string literal indexes",
-        });
-      }
-      const indexedProperty = indexedNode.indexType.literal.text;
-
-      const next = declaration.members.find((member): member is ts.PropertySignature => {
-        return (
-          ts.isPropertySignature(member) &&
-          (ts.isIdentifier(member.name) || ts.isStringLiteral(member.name)) &&
-          member.name.text === indexedProperty
-        );
-      });
-      if (!next || !next.type) {
-        throw new DatatypeExtractionError({
-          ...invalidIndexedAccessError,
-          message: `Couldn't find member ${indexedProperty} in indexed access`,
-        });
-      }
-      return visitNext(next.type);
-    }
-
-    case ts.SyntaxKind.TypeQuery:
-      throw new DatatypeExtractionError(noTypeOfError);
-
-    case ts.SyntaxKind.MappedType:
-      throw new DatatypeExtractionError(noMappedTypes);
-
-    case ts.SyntaxKind.AnyKeyword:
-    case ts.SyntaxKind.LiteralType: {
-      throw new DatatypeExtractionError(badTypeReturnError);
-    }
-    case ts.SyntaxKind.IntersectionType:
-      throw new DatatypeExtractionError(noIntersectionTypesError);
-    case ts.SyntaxKind.ClassDeclaration: {
-      throw new DatatypeExtractionError(classError);
-    }
-    case ts.SyntaxKind.UnionType: {
-      const remainingTypes = (node as ts.UnionTypeNode).types.filter(
-        ({ kind }) => kind !== ts.SyntaxKind.UndefinedKeyword,
-      );
-      if (remainingTypes.length !== 1) {
-        throw new DatatypeExtractionError(limitedUnionsError);
-      }
-      const remaining = remainingTypes[0];
-      if (!remaining) {
-        throw new DatatypeExtractionError(badTypeReturnError);
-      }
-      return visitNext(remaining);
-    }
-    default:
-      throw new Error("Unhandled node kind.");
+  // In some future we could support intersection types where all the fields are known
+  if (nonNullable.isIntersection()) {
+    throw new DatatypeExtractionError(noIntersectionTypesError);
+  } else if (nonNullable.isClass()) {
+    throw new DatatypeExtractionError(classError);
+  } else if (nonNullable.isUnion()) {
+    throw new DatatypeExtractionError(limitedUnionsError);
   }
+
+  const symbol = nonNullable.getSymbol();
+  if (!symbol) {
+    throw new DatatypeExtractionError(badTypeReturnError);
+  }
+
+  if (!symbol.declarations || symbol.declarations.length === 0) {
+    throw new DatatypeExtractionError(badTypeReturnError);
+  }
+
+  // If there are multiple declarations for the symbol, filter down to only
+  // the interface ones. However, if there is only one, use that one to provide better errors
+  let declaration: ts.Declaration | undefined;
+  if (symbol.declarations.length === 1) {
+    declaration = symbol.declarations[0];
+  } else {
+    declaration = symbol.declarations.filter(
+      (decl) => decl.kind === ts.SyntaxKind.InterfaceDeclaration,
+    )[0];
+  }
+
+  if (!declaration) {
+    throw new DatatypeExtractionError(badTypeReturnError);
+  }
+
+  if (ts.isTypeLiteralNode(declaration)) {
+    return declaration;
+  } else if (ts.isInterfaceDeclaration(declaration)) {
+    return declaration;
+  } else if (ts.isMappedTypeNode(declaration)) {
+    throw new DatatypeExtractionError(noMappedTypes);
+  } else if (ts.isClassDeclaration(declaration)) {
+    throw new DatatypeExtractionError(classError);
+  } else if (ts.isFunctionLike(declaration)) {
+    throw new DatatypeExtractionError(functionError);
+  }
+
+  throw new DatatypeExtractionError(badTypeReturnError);
 };
 
 export const constructDatatypes = (
@@ -360,8 +272,21 @@ export const constructDatatypes = (
   if (isNodeFromRosModule(node) && messageDef != undefined) {
     return {
       outputDatatype: messageDef,
-      datatypes: baseDatatypes,
+      datatypes: basicDatatypes,
     };
+  }
+
+  // In this case, we've detected that the return type comes from the generated types file.
+  // We can look up the datatype name by finding it in the file. The name will be the property name
+  // under which the type exists.
+  if (node.getSourceFile().fileName === "/studio_node/generatedTypes.ts") {
+    if (ts.isPropertySignature(node.parent) && ts.isStringLiteral(node.parent.name)) {
+      const datatype = node.parent.name.text;
+      return {
+        outputDatatype: datatype,
+        datatypes: basicDatatypes,
+      };
+    }
   }
 
   let datatypes: RosDatatypes = new Map();
@@ -386,17 +311,6 @@ export const constructDatatypes = (
         const typeLiteral = tsNode as ts.TypeLiteralNode;
         const symbolName = maybeSymbol(tsNode)?.name;
 
-        // The 'json' type is special because rosbagjs represents it as a primitive field
-        if (isNodeFromRosModule(typeLiteral) && symbolName === "json") {
-          return {
-            name,
-            type: "json",
-            isArray: false,
-            isComplex: false,
-            arrayLength: undefined,
-          };
-        }
-
         const messageDefinition =
           symbolName != undefined ? messageDefinitionMap[symbolName] : undefined;
 
@@ -404,10 +318,6 @@ export const constructDatatypes = (
           isNodeFromRosModule(typeLiteral) && messageDefinition != undefined
             ? messageDefinition
             : `${currentDatatype}/${name}`;
-
-        if (nestedType == undefined) {
-          throw new Error("could not find nested type");
-        }
 
         const typeParamMap = ts.isInterfaceDeclaration(tsNode)
           ? buildTypeMapFromParams(tsNode.typeParameters, typeMap)
@@ -612,8 +522,17 @@ export const constructDatatypes = (
       case ts.SyntaxKind.AnyKeyword:
         throw new DatatypeExtractionError(noNestedAny);
 
-      default:
-        throw new Error(`Unhandled node kind (${tsNode.kind}) for field (${name})`);
+      default: {
+        const locationType = checker.getTypeAtLocation(tsNode);
+
+        const symbol = locationType.symbol;
+        const declaration = symbol.declarations?.[0];
+        if (symbol.declarations?.length !== 1 || !declaration) {
+          throw new DatatypeExtractionError(badTypeReturnError);
+        }
+
+        return getRosMsgField(name, declaration, false, undefined, typeMap, innerDepth + 1);
+      }
     }
   };
 

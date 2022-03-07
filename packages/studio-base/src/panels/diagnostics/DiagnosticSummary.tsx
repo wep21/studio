@@ -16,10 +16,11 @@ import {
   IDropdownOption,
   IDropdownStyles,
   ISelectableOption,
-  makeStyles,
   useTheme,
 } from "@fluentui/react";
 import PinIcon from "@mdi/svg/svg/pin.svg";
+import { Stack, Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import cx from "classnames";
 import { compact } from "lodash";
 import { useCallback, useMemo } from "react";
@@ -28,7 +29,6 @@ import { List, AutoSizer, ListRowProps } from "react-virtualized";
 import { filterMap } from "@foxglove/den/collection";
 import { useDataSourceInfo } from "@foxglove/studio-base/PanelAPI";
 import EmptyState from "@foxglove/studio-base/components/EmptyState";
-import Flex from "@foxglove/studio-base/components/Flex";
 import Icon from "@foxglove/studio-base/components/Icon";
 import { LegacyInput } from "@foxglove/studio-base/components/LegacyStyledComponents";
 import Panel from "@foxglove/studio-base/components/Panel";
@@ -58,18 +58,18 @@ type NodeRowProps = {
   onClickPin: (info: DiagnosticInfo) => void;
 };
 
-const useStyles = makeStyles((theme) => ({
-  ok: { color: theme.semanticColors.successIcon },
-  warn: { color: theme.semanticColors.warningBackground },
-  error: { color: theme.semanticColors.errorBackground },
-  stale: { color: theme.semanticColors.infoIcon },
+const useStyles = makeStyles((theme: Theme) => ({
+  ok: { color: theme.palette.success.main },
+  warn: { color: theme.palette.warning.main },
+  error: { color: theme.palette.error.main },
+  stale: { color: theme.palette.text.secondary },
   pinIcon: {
     marginRight: 4,
     marginLeft: 4,
     verticalAlign: "middle",
     visibility: "hidden",
 
-    svg: {
+    "& svg": {
       fontSize: 16,
       position: "relative",
       top: -1,
@@ -91,11 +91,10 @@ const useStyles = makeStyles((theme) => ({
     textOverflow: "ellipsis",
 
     "&:hover": {
-      backgroundColor: theme.semanticColors.listItemBackgroundHovered,
-
-      "> .icon": {
-        visibility: "visible",
-      },
+      backgroundColor: theme.palette.action.hover,
+    },
+    "&:hover .icon": {
+      visibility: "visible",
     },
   },
 }));
@@ -165,8 +164,8 @@ function DiagnosticSummary(props: Props): JSX.Element {
         },
         caretDownWrapper: {
           top: 0,
-          lineHeight: 24,
-          height: 24,
+          lineHeight: 18,
+          height: 18,
         },
         title: {
           backgroundColor: "transparent",
@@ -247,7 +246,7 @@ function DiagnosticSummary(props: Props): JSX.Element {
         fontSize: "12px",
       }}
       value={hardwareIdFilter}
-      placeholder="Filter hardware id"
+      placeholder="Filter"
       onChange={(e) => saveConfig({ hardwareIdFilter: e.target.value })}
     />
   );
@@ -268,7 +267,7 @@ function DiagnosticSummary(props: Props): JSX.Element {
 
   const diagnostics = useDiagnostics(topicToRender);
   const summary = useMemo(() => {
-    if (diagnostics.diagnosticsByNameByTrimmedHardwareId.size === 0) {
+    if (diagnostics.size === 0) {
       return (
         <EmptyState>
           Waiting for <code>{topicToRender}</code> messages
@@ -280,8 +279,7 @@ function DiagnosticSummary(props: Props): JSX.Element {
       if (name == undefined || trimmedHardwareId == undefined) {
         return;
       }
-      const diagnosticsByName =
-        diagnostics.diagnosticsByNameByTrimmedHardwareId.get(trimmedHardwareId);
+      const diagnosticsByName = diagnostics.get(trimmedHardwareId);
       return diagnosticsByName?.get(name);
     });
 
@@ -332,14 +330,14 @@ function DiagnosticSummary(props: Props): JSX.Element {
           [classes.stale]: option.text === "stale",
         })}
       >
-        &gt;= {option?.text.toUpperCase() ?? ""}
+        &gt;= {option.text.toUpperCase()}
       </div>
     ) : (
       ReactNull
     );
 
   return (
-    <Flex col>
+    <Stack flex="auto">
       <PanelToolbar helpContent={helpContent} additionalIcons={topicToRenderMenu}>
         <Dropdown
           styles={dropdownStyles}
@@ -357,8 +355,8 @@ function DiagnosticSummary(props: Props): JSX.Element {
         />
         {hardwareFilter}
       </PanelToolbar>
-      <Flex col>{summary}</Flex>
-    </Flex>
+      <Stack flex="auto">{summary}</Stack>
+    </Stack>
   );
 }
 

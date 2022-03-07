@@ -16,6 +16,10 @@
 import exampleDatatypes from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/fixtures/example-datatypes";
 import generateRosLib from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/generateRosLib";
 import {
+  generateEmptyTypesLib,
+  generateTypesLib,
+} from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/generateTypesLib";
+import {
   getOutputTopic,
   validateOutputTopic,
   validateInputTopics,
@@ -25,8 +29,6 @@ import {
   compose,
   getInputTopics,
 } from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/transform";
-import baseDatatypes from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/typescript/baseDatatypes";
-import rawUserUtils from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/typescript/rawUserUtils";
 import {
   DiagnosticSeverity,
   ErrorCodes,
@@ -34,6 +36,7 @@ import {
   NodeData,
 } from "@foxglove/studio-base/players/UserNodePlayer/types";
 import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
+import { basicDatatypes } from "@foxglove/studio-base/util/datatypes";
 import { DEFAULT_STUDIO_NODE_PREFIX } from "@foxglove/studio-base/util/globalConstants";
 
 // Exported for use in other tests.
@@ -54,6 +57,7 @@ const baseNodeData: NodeData = {
     topics: [{ name: "/some_topic", datatype: "std_msgs/ColorRGBA" }],
     datatypes: exampleDatatypes,
   }),
+  typesLib: generateEmptyTypesLib(),
 };
 
 describe("pipeline", () => {
@@ -347,10 +351,9 @@ describe("pipeline", () => {
       const x = norm({x:1, y:2, z:3});
       `,
     ])("produces projectCode", (sourceCode) => {
-      const { projectCode, diagnostics, transpiledCode } = compile({ ...baseNodeData, sourceCode });
-      expect(projectCode?.size).toEqual(rawUserUtils.length);
-      expect(typeof transpiledCode).toEqual("string");
+      const { diagnostics, transpiledCode } = compile({ ...baseNodeData, sourceCode });
       expect(diagnostics).toEqual([]);
+      expect(typeof transpiledCode).toEqual("string");
     });
   });
 
@@ -581,7 +584,7 @@ describe("pipeline", () => {
     );
 
     const baseDatatypesWithNestedColor: RosDatatypes = new Map([
-      ...baseDatatypes,
+      ...basicDatatypes,
       [
         baseNodeData.name,
         {
@@ -1082,7 +1085,7 @@ describe("pipeline", () => {
           };
 
           export default publisher;`,
-        datatypes: baseDatatypes,
+        datatypes: basicDatatypes,
         outputDatatype: "std_msgs/ColorRGBA",
       },
       {
@@ -1118,7 +1121,7 @@ describe("pipeline", () => {
           };
 
           export default publisher;`,
-        datatypes: baseDatatypes,
+        datatypes: basicDatatypes,
         outputDatatype: "std_msgs/ColorRGBA",
       },
       {
@@ -1134,7 +1137,7 @@ describe("pipeline", () => {
           };
 
           export default publisher;`,
-        datatypes: baseDatatypes,
+        datatypes: basicDatatypes,
         outputDatatype: "std_msgs/ColorRGBA",
       },
       {
@@ -1152,12 +1155,103 @@ describe("pipeline", () => {
           };
 
           export default publisher;`,
-        datatypes: baseDatatypes,
+        datatypes: basicDatatypes,
+        outputDatatype: "std_msgs/ColorRGBA",
+      },
+      {
+        description: "Should handle deep subtype lookup",
+        sourceCode: `
+          import { Input } from "ros";
+
+          type MessageBySchemaName = {
+            "std_msgs/Header": {
+              frame_id: string;
+              seq: number;
+              stamp: {
+                sec: number,
+                nsec: number,
+              };
+            };
+            "pkg/Custom": {
+              header: MessageBySchemaName["std_msgs/Header"];
+            };
+          };
+
+          type Message<T extends keyof MessageBySchemaName> = MessageBySchemaName[T];
+
+          export const inputs = ["/some_topic"];
+          export const output = "/studio_node/sample";
+
+          type PoseStamped = Message<"pkg/Custom">;
+          type Output = PoseStamped;
+
+          const publisher = (message: Input<"/some_topic">): Output => {
+            return {
+              header: { frame_id: "foo", seq: 0, stamp: { sec: 0, nsec: 0 } },
+            };
+          };
+          export default publisher;`,
+        datatypes: new Map(
+          Object.entries({
+            "/studio_node/main": {
+              definitions: [
+                {
+                  arrayLength: undefined,
+                  isArray: false,
+                  isComplex: true,
+                  name: "header",
+                  type: "/studio_node/main/header",
+                },
+              ],
+            },
+            "/studio_node/main/header": {
+              definitions: [
+                {
+                  arrayLength: undefined,
+                  isArray: false,
+                  isComplex: false,
+                  name: "frame_id",
+                  type: "string",
+                },
+                {
+                  arrayLength: undefined,
+                  isArray: false,
+                  isComplex: false,
+                  name: "seq",
+                  type: "float64",
+                },
+                {
+                  arrayLength: undefined,
+                  isArray: false,
+                  isComplex: false,
+                  name: "stamp",
+                  type: "time",
+                },
+              ],
+            },
+          }),
+        ),
+        outputDatatype: "/studio_node/main",
+      },
+      {
+        description: "Should detect output datatype from input datatypes",
+        sourceCode: `
+          import { Message } from "./types";
+
+          export const inputs = [];
+          export const output = "${DEFAULT_STUDIO_NODE_PREFIX}";
+
+          const publisher = (message: any): Message<"std_msgs/ColorRGBA"> => {
+            return { r: 1, g: 1, b: 1, a: 1 };
+          };
+
+          export default publisher;`,
+        datatypes: basicDatatypes,
         outputDatatype: "std_msgs/ColorRGBA",
       },
       /*
       ERRORS
-    */
+      */
       {
         description: "No default export",
         sourceCode: `
@@ -1413,7 +1507,7 @@ describe("pipeline", () => {
           export default (msg: any): MyAny => {
             return () => 1;
           };`,
-        error: ErrorCodes.DatatypeExtraction.NO_TYPEOF,
+        error: ErrorCodes.DatatypeExtraction.NO_FUNCTIONS,
       },
       {
         description: "Nested typeof func",
@@ -1482,7 +1576,7 @@ describe("pipeline", () => {
           export default (msg: any): Pos[keyof Pos] => {
             return { pos: { x: 1, y: 2 } };
           };`,
-        error: ErrorCodes.DatatypeExtraction.INVALID_INDEXED_ACCESS,
+        error: ErrorCodes.DatatypeExtraction.LIMITED_UNIONS,
       },
       {
         description: "Indexed access type with non-string index",
@@ -1491,7 +1585,7 @@ describe("pipeline", () => {
           export default (msg: any): Pos[3] => {
             throw new Error();
           };`,
-        error: ErrorCodes.DatatypeExtraction.INVALID_INDEXED_ACCESS,
+        error: ErrorCodes.DatatypeExtraction.BAD_TYPE_RETURN,
       },
     ];
 
@@ -1507,10 +1601,12 @@ describe("pipeline", () => {
       filteredTestCases.forEach(
         ({ description, sourceCode, datatypes = new Map(), error, outputDatatype, rosLib }) => {
           it(`${error != undefined ? "Expected Error: " : ""}${description}`, () => {
-            const inputNodeData = {
+            const typesLib = generateTypesLib({ topics: [], datatypes });
+            const inputNodeData: NodeData = {
               ...baseNodeData,
               datatypes,
               sourceCode,
+              typesLib,
               ...(rosLib != undefined ? { rosLib } : {}),
             };
             const nodeData = extract(inputNodeData, []);

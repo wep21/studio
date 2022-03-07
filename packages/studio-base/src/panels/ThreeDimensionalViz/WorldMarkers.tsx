@@ -32,8 +32,12 @@ import {
   LaserScans,
   PointClouds,
   PoseMarkers,
+  LinedConvexHulls,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/commands";
-import MeshMarkers from "@foxglove/studio-base/panels/ThreeDimensionalViz/commands/MeshMarkers";
+import GlLineLists from "@foxglove/studio-base/panels/ThreeDimensionalViz/commands/GlLineLists";
+import MeshMarkers, {
+  LoadModelOptions,
+} from "@foxglove/studio-base/panels/ThreeDimensionalViz/commands/MeshMarkers";
 import {
   LAYER_INDEX_TEXT,
   LAYER_INDEX_OCCUPANCY_GRIDS,
@@ -51,6 +55,7 @@ import {
   TextMarker,
   ColorMarker,
   MeshMarker,
+  GlLineListMarker,
 } from "@foxglove/studio-base/types/Messages";
 import { ReglColor } from "@foxglove/studio-base/util/colorUtils";
 
@@ -69,6 +74,7 @@ export type InteractiveMarkersByType = {
   grid: Interactive<BaseMarker>[];
   instancedLineList: Interactive<BaseMarker>[];
   laserScan: Interactive<BaseMarker>[];
+  linedConvexHull: Interactive<LineListMarker | LineStripMarker>[];
   lineList: Interactive<LineListMarker>[];
   lineStrip: Interactive<LineStripMarker>[];
   mesh: Interactive<MeshMarker>[];
@@ -79,6 +85,7 @@ export type InteractiveMarkersByType = {
   sphereList: Interactive<SphereListMarker>[];
   text: Interactive<TextMarker>[];
   triangleList: MarkerWithInteractionData[];
+  glLineList: Interactive<GlLineListMarker>[];
 };
 
 // Generate an alphabet for text makers with the most
@@ -103,6 +110,7 @@ export type WorldMarkerProps = {
   markersByType: InteractiveMarkersByType;
   clearCachedMarkers: boolean;
   cameraDistance: number;
+  loadModelOptions: LoadModelOptions;
 };
 
 // Average a list of color markers into a single output color value. The returned value is the
@@ -137,6 +145,7 @@ export default function WorldMarkers({
   layerIndex,
   markersByType,
   clearCachedMarkers,
+  loadModelOptions,
 }: WorldMarkerProps): JSX.Element {
   const getChildrenForHitmap = useMemo(() => createInstancedGetChildrenForHitmap(1), []);
   const {
@@ -149,6 +158,7 @@ export default function WorldMarkers({
     grid,
     instancedLineList,
     laserScan,
+    linedConvexHull,
     lineList,
     lineStrip,
     mesh,
@@ -158,6 +168,7 @@ export default function WorldMarkers({
     sphere,
     sphereList,
     triangleList,
+    glLineList,
   } = markersByType;
 
   // GLTextAtlas download is shared among all instances of World, but we should only load the GLText command once we
@@ -217,7 +228,9 @@ export default function WorldMarkers({
       <Lines getChildrenForHitmap={getChildrenForHitmap} layerIndex={layerIndex}>
         {[...instancedLineList, ...groupedLines]}
       </Lines>
-      <MeshMarkers layerIndex={layerIndex} markers={mesh}></MeshMarkers>
+      <MeshMarkers layerIndex={layerIndex} markers={mesh} loadModelOptions={loadModelOptions} />
+      <GlLineLists glLineLists={glLineList} />
+      <LinedConvexHulls layerIndex={layerIndex}>{linedConvexHull}</LinedConvexHulls>
     </>
   );
 }

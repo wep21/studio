@@ -11,30 +11,41 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import {
-  Dropdown,
-  IDropdownOption,
-  TagPicker,
-  Stack,
-  ISelectableOption,
-  useTheme,
-} from "@fluentui/react";
+import { Dropdown, IDropdownOption, TagPicker, ISelectableOption, useTheme } from "@fluentui/react";
 import ClipboardOutlineIcon from "@mdi/svg/svg/clipboard-outline.svg";
+import { Stack } from "@mui/material";
 import cx from "classnames";
 
 import Icon from "@foxglove/studio-base/components/Icon";
 import useLogStyles from "@foxglove/studio-base/panels/Log/useLogStyles";
-import { MessageEvent } from "@foxglove/studio-base/players/types";
 import clipboard from "@foxglove/studio-base/util/clipboard";
 
-import LevelToString, { KNOWN_LOG_LEVELS } from "./LevelToString";
-import { RosgraphMsgs$Log } from "./types";
+import LevelToString from "./LevelToString";
+import { LogMessageEvent, LogLevel } from "./types";
 
 // Create the log level options nodes once since they don't change per render.
-const LOG_LEVEL_OPTIONS = KNOWN_LOG_LEVELS.map<IDropdownOption>((level) => ({
-  text: `>= ${LevelToString(level)}`,
-  key: level,
-}));
+const LOG_LEVEL_OPTIONS: IDropdownOption[] = [
+  {
+    text: ">= DEBUG",
+    key: LogLevel.DEBUG,
+  },
+  {
+    text: ">= INFO",
+    key: LogLevel.INFO,
+  },
+  {
+    text: ">= WARN",
+    key: LogLevel.WARN,
+  },
+  {
+    text: ">= ERROR",
+    key: LogLevel.ERROR,
+  },
+  {
+    text: ">= FATAL",
+    key: LogLevel.FATAL,
+  },
+];
 
 type Filter = {
   minLogLevel: number;
@@ -45,7 +56,7 @@ export type FilterBarProps = {
   searchTerms: Set<string>;
   nodeNames: Set<string>;
   minLogLevel: number;
-  messages: readonly MessageEvent<RosgraphMsgs$Log>[];
+  messages: readonly LogMessageEvent[];
 
   onFilterChange: (filter: Filter) => void;
 };
@@ -97,7 +108,7 @@ export default function FilterBar(props: FilterBarProps): JSX.Element {
   const theme = useTheme();
   const logStyles = useLogStyles();
   return (
-    <Stack grow horizontal tokens={{ childrenGap: theme.spacing.s1 }}>
+    <Stack flexGrow={1} direction="row" spacing={1}>
       <Dropdown
         styles={{ title: { background: "transparent" } }}
         onRenderOption={(option) => renderOption(option, logStyles)}
@@ -114,7 +125,7 @@ export default function FilterBar(props: FilterBarProps): JSX.Element {
         selectedKey={props.minLogLevel}
       />
 
-      <Stack grow>
+      <Stack flexGrow={1}>
         <TagPicker
           inputProps={{
             placeholder: "Search filter",
@@ -130,8 +141,8 @@ export default function FilterBar(props: FilterBarProps): JSX.Element {
           onResolveSuggestions={(filter: string) => {
             return [
               { name: filter, key: filter },
-              ...nodeNameOptions.filter(
-                ({ key }) => selectedItems?.every((item) => item.key !== key) ?? true,
+              ...nodeNameOptions.filter(({ key }) =>
+                selectedItems.every((item) => item.key !== key),
               ),
             ];
           }}
@@ -143,7 +154,7 @@ export default function FilterBar(props: FilterBarProps): JSX.Element {
           }}
         />
       </Stack>
-      <Stack verticalAlign="center">
+      <Stack justifyContent="center">
         <div
           style={{
             whiteSpace: "nowrap",
@@ -155,7 +166,7 @@ export default function FilterBar(props: FilterBarProps): JSX.Element {
           <Icon
             style={{ padding: "1px 0px 0px 6px" }}
             onClick={() => {
-              void clipboard.copy(JSON.stringify(props.messages, undefined, 2));
+              void clipboard.copy(JSON.stringify(props.messages, undefined, 2) ?? "");
             }}
             tooltip="Copy log to clipboard"
           >

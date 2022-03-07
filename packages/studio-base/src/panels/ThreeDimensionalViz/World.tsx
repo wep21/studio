@@ -30,6 +30,7 @@ import WorldMarkers, {
   InteractiveMarkersByType,
   MarkerWithInteractionData,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/WorldMarkers";
+import { LoadModelOptions } from "@foxglove/studio-base/panels/ThreeDimensionalViz/commands/MeshMarkers";
 import { LAYER_INDEX_DEFAULT_BASE } from "@foxglove/studio-base/panels/ThreeDimensionalViz/constants";
 import {
   IImmutableCoordinateFrame,
@@ -42,6 +43,7 @@ import {
   CubeListMarker,
   CubeMarker,
   CylinderMarker,
+  GlLineListMarker,
   LineListMarker,
   LineStripMarker,
   MeshMarker,
@@ -50,6 +52,7 @@ import {
   SphereMarker,
   TextMarker,
 } from "@foxglove/studio-base/types/Messages";
+import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 
 import { MarkerCollector, MarkerProvider } from "./types";
 import withHighlights from "./withHighlights";
@@ -71,6 +74,7 @@ type Props = WorldSearchTextProps & {
   onMouseDown?: MouseHandler;
   onMouseMove?: MouseHandler;
   onMouseUp?: MouseHandler;
+  loadModelOptions: LoadModelOptions;
 };
 
 function getMarkers({
@@ -101,6 +105,8 @@ function getMarkers({
     instancedLineList: (o) =>
       markers.instancedLineList.push(o as unknown as Interactive<BaseMarker>),
     laserScan: (o) => markers.laserScan.push(o as unknown as Interactive<BaseMarker>),
+    linedConvexHull: (o) =>
+      markers.linedConvexHull.push(o as unknown as Interactive<LineListMarker | LineStripMarker>),
     lineList: (o) => markers.lineList.push(o as Interactive<LineListMarker>),
     lineStrip: (o) => markers.lineStrip.push(o as Interactive<LineStripMarker>),
     mesh: (o) => markers.mesh.push(o as Interactive<MeshMarker>),
@@ -111,6 +117,7 @@ function getMarkers({
     sphereList: (o) => markers.sphereList.push(o as Interactive<SphereListMarker>),
     text: (o) => markers.text.push(o as Interactive<TextMarker>),
     triangleList: (o) => markers.triangleList.push(o as unknown as MarkerWithInteractionData),
+    glLineList: (o) => markers.glLineList.push(o as Interactive<GlLineListMarker>),
   };
 
   const args = { add: collector, transforms, renderFrame, fixedFrame, time };
@@ -145,6 +152,7 @@ function World(
     searchTextOpen,
     selectedMatchIndex,
     searchTextMatches,
+    loadModelOptions,
   }: Props,
   ref: typeof Worldview,
 ) {
@@ -161,6 +169,7 @@ function World(
     grid: [],
     instancedLineList: [],
     laserScan: [],
+    linedConvexHull: [],
     lineList: [],
     lineStrip: [],
     mesh: [],
@@ -171,6 +180,7 @@ function World(
     sphereList: [],
     text: [],
     triangleList: [],
+    glLineList: [],
   };
   for (const key in markersRef.current) {
     (markersRef.current as Record<string, unknown[]>)[key]!.length = 0;
@@ -231,7 +241,9 @@ function World(
           markersByType: processedMarkersByType,
           layerIndex: LAYER_INDEX_DEFAULT_BASE,
           clearCachedMarkers: false,
-          cameraDistance: cameraState.distance ?? DEFAULT_CAMERA_STATE.distance,
+          cameraDistance:
+            mightActuallyBePartial(cameraState).distance ?? DEFAULT_CAMERA_STATE.distance,
+          loadModelOptions,
         }}
       />
     </Worldview>

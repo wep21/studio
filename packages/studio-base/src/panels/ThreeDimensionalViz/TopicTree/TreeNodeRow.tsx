@@ -31,7 +31,7 @@ import { colors } from "@foxglove/studio-base/util/sharedStyleConstants";
 
 import NodeName from "./NodeName";
 import TreeNodeMenu, { DOT_MENU_WIDTH } from "./TreeNodeMenu";
-import VisibilityToggle, { TOGGLE_WRAPPER_SIZE, TOPIC_ROW_PADDING } from "./VisibilityToggle";
+import VisibilityToggle from "./VisibilityToggle";
 import { DerivedCustomSettings, SetCurrentEditingTopic, TreeNode } from "./types";
 
 export const ICON_SIZE = 22;
@@ -39,6 +39,8 @@ export const ICON_SIZE = 22;
 const MAX_GROUP_ERROR_WIDTH = 64;
 const VISIBLE_COUNT_WIDTH = 18;
 const VISIBLE_COUNT_MARGIN = 4;
+
+const TOGGLE_WRAPPER_SIZE = 24;
 
 export const STreeNodeRow = styled.div<{ visibleInScene: boolean }>`
   color: ${({ theme, visibleInScene }) =>
@@ -53,7 +55,7 @@ export const SLeft = styled.div`
   align-items: center;
   flex: 1 1 auto;
   min-height: ${TOGGLE_WRAPPER_SIZE}px;
-  padding: ${TOPIC_ROW_PADDING}px 0px;
+  padding: 3px 0px;
 `;
 
 const SErrorCount = styled.small`
@@ -102,7 +104,7 @@ const SVisibleCount = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: ${({ theme }) => theme.palette.neutralTertiary};
   font-size: 10px;
   margin: 0 ${VISIBLE_COUNT_MARGIN}px;
 `;
@@ -155,8 +157,10 @@ export default function TreeNodeRow({
 
   const rowWidth = width - (isXSWidth ? 0 : TREE_SPACING * 2);
 
-  const togglesWidth = TOGGLE_WRAPPER_SIZE;
-  const rightActionWidth = providerAvailable ? togglesWidth + DOT_MENU_WIDTH : DOT_MENU_WIDTH;
+  const rightActionWidth = providerAvailable
+    ? TOGGLE_WRAPPER_SIZE + DOT_MENU_WIDTH
+    : DOT_MENU_WIDTH;
+
   // -8px to add some spacing between the name and right action area.
   let maxNodeNameWidth = rowWidth - rightActionWidth - 8;
 
@@ -179,7 +183,10 @@ export default function TreeNodeRow({
   );
 
   const showVisibleTopicsCount =
-    providerAvailable && node.type === "group" && node.children && visibleTopicsCount > 0;
+    providerAvailable &&
+    node.type === "group" &&
+    node.children.length > 0 &&
+    visibleTopicsCount > 0;
 
   maxNodeNameWidth -= showVisibleTopicsCount ? VISIBLE_COUNT_WIDTH + VISIBLE_COUNT_MARGIN * 2 : 0;
 
@@ -232,7 +239,7 @@ export default function TreeNodeRow({
             <LeadPencilIcon />
           </Icon>
         )}
-        {showGroupError && errorTooltip && sceneErrors && (
+        {showGroupError && errorTooltip && sceneErrors.length > 0 && (
           <Tooltip contents={errorTooltip} placement="top">
             <SErrorCount>{`${sceneErrors.length} ${
               sceneErrors.length === 1 ? "error" : "errors"
@@ -265,7 +272,6 @@ export default function TreeNodeRow({
             <VisibilityToggle
               available={available}
               dataTest={`visibility-toggle~${key}`}
-              size={node.type === "topic" ? "SMALL" : "NORMAL"}
               overrideColor={derivedCustomSettings?.overrideColor}
               checked={checked}
               onToggle={() => {
@@ -286,7 +292,7 @@ export default function TreeNodeRow({
                   setHoveredMarkerMatchers([{ topic: topicName }]);
                 }
               }}
-              visibleInScene={visible ?? false}
+              visibleInScene={visible}
               onMouseEnter={() => setHoveredMarkerMatchers([{ topic: topicName }])}
               onMouseLeave={() => setHoveredMarkerMatchers([])}
             />

@@ -18,6 +18,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { Mosaic, MosaicNode, MosaicWindow } from "react-mosaic-component";
 
 import { useShallowMemo } from "@foxglove/hooks";
+import { MessageEvent } from "@foxglove/studio";
 import MockMessagePipelineProvider from "@foxglove/studio-base/components/MessagePipeline/MockMessagePipelineProvider";
 import AppConfigurationContext from "@foxglove/studio-base/context/AppConfigurationContext";
 import {
@@ -39,7 +40,6 @@ import { GlobalVariables } from "@foxglove/studio-base/hooks/useGlobalVariables"
 import { LinkedGlobalVariables } from "@foxglove/studio-base/panels/ThreeDimensionalViz/Interactions/useLinkedGlobalVariables";
 import { Diagnostic, UserNodeLog } from "@foxglove/studio-base/players/UserNodePlayer/types";
 import {
-  Frame,
   Topic,
   PlayerStateActiveData,
   Progress,
@@ -50,6 +50,10 @@ import MockCurrentLayoutProvider from "@foxglove/studio-base/providers/CurrentLa
 import HelpInfoProvider from "@foxglove/studio-base/providers/HelpInfoProvider";
 import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
 import { PanelConfigSchemaEntry, SavedProps, UserNodes } from "@foxglove/studio-base/types/panels";
+
+type Frame = {
+  [topic: string]: MessageEvent<unknown>[];
+};
 
 export type Fixture = {
   frame?: Frame;
@@ -69,6 +73,7 @@ export type Fixture = {
   savedProps?: SavedProps;
   publish?: (request: PublishPayload) => void;
   setPublishers?: (publisherId: string, advertisements: AdvertiseOptions[]) => void;
+  setSubscriptions?: ComponentProps<typeof MockMessagePipelineProvider>["setSubscriptions"];
 };
 
 type Props = {
@@ -230,6 +235,7 @@ function UnconnectedPanelSetup(props: Props): JSX.Element | ReactNull {
     progress,
     publish,
     setPublishers,
+    setSubscriptions,
   } = props.fixture ?? {};
   let dTypes = datatypes;
   if (!dTypes) {
@@ -264,6 +270,7 @@ function UnconnectedPanelSetup(props: Props): JSX.Element | ReactNull {
         progress={progress}
         publish={publish}
         setPublishers={setPublishers}
+        setSubscriptions={setSubscriptions}
       >
         <PanelCatalogContext.Provider value={mockPanelCatalog}>
           <AppConfigurationContext.Provider value={mockAppConfiguration}>

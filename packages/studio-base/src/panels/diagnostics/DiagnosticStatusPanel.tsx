@@ -11,13 +11,13 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { Autocomplete, TextField } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import { sortBy } from "lodash";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 
 import { useDataSourceInfo } from "@foxglove/studio-base/PanelAPI";
-import Autocomplete, { IAutocomplete } from "@foxglove/studio-base/components/Autocomplete";
 import EmptyState from "@foxglove/studio-base/components/EmptyState";
-import Flex from "@foxglove/studio-base/components/Flex";
 import Panel from "@foxglove/studio-base/components/Panel";
 import { usePanelContext } from "@foxglove/studio-base/components/PanelContext";
 import PanelToolbar from "@foxglove/studio-base/components/PanelToolbar";
@@ -26,8 +26,9 @@ import { DIAGNOSTIC_TOPIC } from "@foxglove/studio-base/util/globalConstants";
 
 import DiagnosticStatus from "./DiagnosticStatus";
 import helpContent from "./DiagnosticStatusPanel.help.md";
-import useDiagnostics, { DiagnosticAutocompleteEntry } from "./useDiagnostics";
-import { DiagnosticInfo, getDisplayName, trimHardwareId } from "./util";
+import useAvailableDiagnostics from "./useAvailableDiagnostics";
+import useDiagnostics from "./useDiagnostics";
+import { getDisplayName } from "./util";
 
 export type Config = {
   selectedHardwareId?: string;
@@ -41,8 +42,25 @@ type Props = {
   config: Config;
   saveConfig: (arg0: Partial<Config>) => void;
 };
+
+const useStyles = makeStyles({
+  root: {
+    display: "flex",
+    flexDirection: "column",
+    flex: "auto",
+    overflow: "scroll",
+  },
+  content: {
+    display: "flex",
+    flexDirection: "column",
+    flex: "auto",
+    overflowY: "auto",
+  },
+});
+
 // component to display a single diagnostic status from list
 function DiagnosticStatusPanel(props: Props) {
+  const classes = useStyles();
   const { saveConfig, config } = props;
   const { topics } = useDataSourceInfo();
   const { openSiblingPanel } = usePanelContext();
@@ -53,20 +71,6 @@ function DiagnosticStatusPanel(props: Props) {
     topicToRender,
     collapsedSections = [],
   } = config;
-
-  const onSelect = useCallback(
-    (_value: string, entry: DiagnosticAutocompleteEntry, autocomplete: IAutocomplete) => {
-      const hasNewHardwareId = config.selectedHardwareId !== entry.hardware_id;
-      const hasNewName = config.selectedName !== entry.name;
-      saveConfig({
-        selectedHardwareId: entry.hardware_id,
-        selectedName: entry.name,
-        collapsedSections: hasNewHardwareId || hasNewName ? [] : config.collapsedSections,
-      });
-      autocomplete.blur();
-    },
-    [config, saveConfig],
-  );
 
   const topicToRenderMenu = (
     <TopicToRenderMenu
@@ -82,54 +86,103 @@ function DiagnosticStatusPanel(props: Props) {
     />
   );
 
-  const selectedDisplayName =
-    selectedHardwareId != undefined
-      ? getDisplayName(selectedHardwareId, selectedName ?? "")
-      : undefined;
+  const availableDiagnostics = useAvailableDiagnostics(topicToRender);
 
-  const diagnostics = useDiagnostics(topicToRender);
-  const [selectedItem, selectedItems] = useMemo(() => {
-    let selItem: DiagnosticInfo | undefined; // selected by name+hardware_id
-    let selItems: DiagnosticInfo[] | undefined; // [selectedItem], or all diagnostics with selectedHardwareId if no name is selected
-    if (selectedHardwareId != undefined) {
-      const items = [];
-      const diagnosticsByName = diagnostics.diagnosticsByNameByTrimmedHardwareId.get(
-        trimHardwareId(selectedHardwareId),
-      );
-      if (diagnosticsByName != undefined) {
-        for (const diagnostic of diagnosticsByName.values()) {
-          if (selectedName == undefined || selectedName === diagnostic.status.name) {
-            items.push(diagnostic);
-            if (selectedName != undefined) {
-              selItem = diagnostic;
-            }
-          }
+  // generate Autocomplete entries from the available diagnostics
+  const autocompleteOptions = useMemo(() => {
+    const items = [];
+
+    for (const [hardwareId, nameSet] of availableDiagnostics) {
+      if (hardwareId) {
+        items.push({ label: hardwareId, hardwareId, name: undefined });
+      }
+
+      for (const name of nameSet) {
+        if (name) {
+          const label = getDisplayName(hardwareId, name);
+          items.push({ label, hardwareId, name });
         }
       }
-      selItems = items;
     }
-    return [selItem, selItems];
+
+    return items;
+  }, [availableDiagnostics]);
+
+  const selectedDisplayName = useMemo(() => {
+    return selectedHardwareId != undefined
+      ? getDisplayName(selectedHardwareId, selectedName ?? "")
+      : undefined;
+  }, [selectedHardwareId, selectedName]);
+
+  const selectedAutocompleteOption = useMemo(() => {
+    return (
+      autocompleteOptions.find((item) => {
+        return item.label === selectedDisplayName;
+      }) ?? ReactNull
+    );
+  }, [autocompleteOptions, selectedDisplayName]);
+
+  const diagnostics = useDiagnostics(topicToRender);
+
+  const filteredDiagnostics = useMemo(() => {
+    const diagnosticsByName = diagnostics.get(selectedHardwareId ?? "");
+    const items = [];
+
+    if (diagnosticsByName != undefined) {
+      for (const diagnostic of diagnosticsByName.values()) {
+        if (selectedName == undefined || selectedName === diagnostic.status.name) {
+          items.push(diagnostic);
+        }
+      }
+    }
+
+    return items;
   }, [diagnostics, selectedHardwareId, selectedName]);
 
+  // If there are available options but none match the user input we show a No matches
+  // but if we don't have any options at all then we show waiting for diagnostics...
+  const noOptionsText =
+    autocompleteOptions.length > 0 ? "No matches" : "Waiting for diagnostics...";
+
   return (
-    <Flex scroll scrollX col>
+    <div className={classes.root}>
       <PanelToolbar floating helpContent={helpContent} additionalIcons={topicToRenderMenu}>
         <Autocomplete
-          placeholder={selectedDisplayName ?? "Select a diagnostic"}
-          items={diagnostics.sortedAutocompleteEntries}
-          getItemText={(entry) => entry.displayName}
-          getItemValue={(entry) => entry.id}
-          onSelect={onSelect}
-          selectedItem={
-            // selected item is only used with getItemValue
-            selectedItem ? { ...selectedItem, hardware_id: "", sortKey: "" } : undefined
-          }
-          inputStyle={{ height: "100%" }}
+          disablePortal
+          blurOnSelect={true}
+          disabled={autocompleteOptions.length === 0}
+          options={autocompleteOptions}
+          value={selectedAutocompleteOption ?? ReactNull}
+          noOptionsText={noOptionsText}
+          onChange={(_ev, value) => {
+            if (!value) {
+              saveConfig({
+                selectedHardwareId: undefined,
+                selectedName: undefined,
+              });
+              return;
+            }
+
+            saveConfig({
+              selectedHardwareId: value.hardwareId,
+              selectedName: value.name,
+            });
+          }}
+          fullWidth
+          size="small"
+          renderInput={(params) => (
+            <TextField
+              variant="standard"
+              {...params}
+              InputProps={{ ...params.InputProps, disableUnderline: true }}
+              placeholder={selectedDisplayName}
+            />
+          )}
         />
       </PanelToolbar>
-      {selectedItems != undefined && selectedItems.length > 0 ? (
-        <Flex col scroll>
-          {sortBy(selectedItems, ({ status }) => status.name.toLowerCase()).map((item) => (
+      {filteredDiagnostics.length > 0 ? (
+        <div className={classes.content}>
+          {sortBy(filteredDiagnostics, ({ status }) => status.name.toLowerCase()).map((item) => (
             <DiagnosticStatus
               key={item.id}
               info={item}
@@ -143,7 +196,7 @@ function DiagnosticStatusPanel(props: Props) {
               collapsedSections={collapsedSections}
             />
           ))}
-        </Flex>
+        </div>
       ) : selectedDisplayName ? (
         <EmptyState>
           Waiting for diagnostics from <code>{selectedDisplayName}</code>
@@ -151,7 +204,7 @@ function DiagnosticStatusPanel(props: Props) {
       ) : (
         <EmptyState>No diagnostic node selected</EmptyState>
       )}
-    </Flex>
+    </div>
   );
 }
 

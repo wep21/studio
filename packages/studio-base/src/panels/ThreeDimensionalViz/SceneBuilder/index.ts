@@ -31,7 +31,8 @@ import {
   MarkerCollector,
   RenderMarkerArgs,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/types";
-import { Topic, Frame, MessageEvent, RosObject } from "@foxglove/studio-base/players/types";
+import { Frame } from "@foxglove/studio-base/panels/ThreeDimensionalViz/useFrame";
+import { Topic, MessageEvent, RosObject } from "@foxglove/studio-base/players/types";
 import {
   Color,
   Marker,
@@ -54,6 +55,7 @@ import {
   PointCloud2,
 } from "@foxglove/studio-base/types/Messages";
 import { clonePose, emptyPose } from "@foxglove/studio-base/util/Pose";
+import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 import naturalSort from "@foxglove/studio-base/util/naturalSort";
 
 const log = Log.getLogger(__filename);
@@ -610,7 +612,7 @@ export default class SceneBuilder implements MarkerProvider {
   };
 
   private _consumeColor = (msg: MessageEvent<Color>): void => {
-    const color = msg.message;
+    const color = mightActuallyBePartial(msg.message);
     if (color.r == undefined || color.g == undefined || color.b == undefined) {
       return;
     }
@@ -845,7 +847,7 @@ export default class SceneBuilder implements MarkerProvider {
       const topicMarkers = collector.getMessages();
       for (const message of topicMarkers) {
         const marker = message as unknown as Interactive<BaseMarker & Marker>;
-        if (marker.ns != undefined && marker.ns !== "") {
+        if (marker.ns !== "") {
           if (!this.namespaceIsEnabled(topic.name, marker.ns)) {
             continue;
           }
@@ -946,6 +948,9 @@ export default class SceneBuilder implements MarkerProvider {
         break;
     }
 
+    // allow topic settings to override renderable marker command (see MarkerSettingsEditor.js)
+    const { overrideCommand } = this._settingsByKey[`t:${topic.name}`] ?? {};
+
     switch (marker.type) {
       case 0:
         return add.arrow(marker);
@@ -956,8 +961,16 @@ export default class SceneBuilder implements MarkerProvider {
       case 3:
         return add.cylinder(marker);
       case 4:
+        if (overrideCommand === "LinedConvexHull") {
+          return add.linedConvexHull(marker);
+        }
+
         return add.lineStrip(marker);
       case 5:
+        if (overrideCommand === "LinedConvexHull") {
+          return add.linedConvexHull(marker);
+        }
+
         return add.lineList(marker);
       case 6:
         return add.cubeList(marker);
@@ -973,8 +986,34 @@ export default class SceneBuilder implements MarkerProvider {
         return add.triangleList(marker);
       case 101:
         return add.grid(marker);
-      case 102:
+      case 102: {
+        // PointCloud decoding requires x, y, and z fields and will fail if all are not present.
+        // We check for the fields here so we can present the user with a topic error prior to decoding.
+        const fieldNames: { [key: string]: boolean } = {};
+        for (const field of marker.fields) {
+          fieldNames[field.name] = true;
+        }
+
+        let missingFields = "";
+        if (fieldNames.x == undefined) {
+          missingFields += "x";
+        }
+        if (fieldNames.y == undefined) {
+          missingFields += " y";
+        }
+        if (fieldNames.z == undefined) {
+          missingFields += " z";
+        }
+        if (missingFields.length > 0) {
+          this._setTopicError(
+            topic.name,
+            `Point cloud is missing required fields: ${missingFields}`,
+          );
+          return;
+        }
+
         return add.pointcloud(marker);
+      }
       case 103:
         return add.poseMarker(marker);
       case 104:

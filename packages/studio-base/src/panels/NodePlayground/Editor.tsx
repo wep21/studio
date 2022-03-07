@@ -11,6 +11,7 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { useTheme } from "@fluentui/react";
 import * as monacoApi from "monaco-editor/esm/vs/editor/editor.api";
 // @ts-expect-error StaticServices does not have type information in the monaco-editor package
 import { StaticServices } from "monaco-editor/esm/vs/editor/standalone/browser/standaloneServices";
@@ -20,11 +21,11 @@ import { useResizeDetector } from "react-resize-detector";
 
 import getPrettifiedCode from "@foxglove/studio-base/panels/NodePlayground/getPrettifiedCode";
 import { Script } from "@foxglove/studio-base/panels/NodePlayground/script";
-import vsStudioTheme from "@foxglove/studio-base/panels/NodePlayground/theme/vs-studio.json";
 import { getNodeProjectConfig } from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/typescript/projectConfig";
 import inScreenshotTests from "@foxglove/studio-base/stories/inScreenshotTests";
+import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 
-const VS_STUDIO_THEME = "vs-studio";
+import { themes } from "./theme";
 
 const codeEditorService = StaticServices.codeEditorService.get();
 
@@ -35,6 +36,7 @@ type Props = {
   setScriptCode: (code: string) => void;
   autoFormatOnSave: boolean;
   rosLib: string;
+  typesLib: string;
 
   save: (code: string) => void;
   setScriptOverride: (script: Script) => void;
@@ -44,7 +46,8 @@ type Props = {
 // https://github.com/microsoft/vscode/blob/master/src/vs/editor/standalone/browser/standaloneCodeServiceImpl.ts
 const gotoSelection = (editor: monacoApi.editor.IEditor, selection?: monacoApi.IRange) => {
   if (selection) {
-    if (selection.endLineNumber != undefined && selection.endColumn != undefined) {
+    const maybeSelection = mightActuallyBePartial(selection);
+    if (maybeSelection.endLineNumber != undefined && maybeSelection.endColumn != undefined) {
       // These fields indicate a range was selected, set the range and reveal it.
       editor.setSelection(selection);
       editor.revealRangeInCenter(
@@ -76,17 +79,33 @@ const Editor = ({
   save,
   setScriptOverride,
   rosLib,
+  typesLib,
 }: Props): ReactElement | ReactNull => {
   const editorRef = React.useRef<CodeEditor>(ReactNull);
   const autoFormatOnSaveRef = React.useRef(autoFormatOnSave);
   autoFormatOnSaveRef.current = autoFormatOnSave;
 
+  const editorTheme = useTheme().isInverted ? "vs-studio-dark" : "vs-studio-light";
+
   React.useEffect(() => {
-    monacoApi.languages.typescript.typescriptDefaults.addExtraLib(
+    const disposable = monacoApi.languages.typescript.typescriptDefaults.addExtraLib(
       rosLib,
       `file:///node_modules/@types/${projectConfig.rosLib.fileName}`,
     );
+    return () => {
+      disposable.dispose();
+    };
   }, [rosLib]);
+
+  React.useEffect(() => {
+    const filePath = monacoApi.Uri.parse(`file:///studio_node/generatedTypes.ts`);
+    const model =
+      monacoApi.editor.getModel(filePath) ??
+      monacoApi.editor.createModel(typesLib, "typescript", filePath);
+
+    model.setValue(typesLib);
+    model.updateOptions({ tabSize: 2 });
+  }, [typesLib]);
 
   /*
   In order to support go-to across files we override the code editor service doOpenEditor method.
@@ -159,10 +178,10 @@ const Editor = ({
       if (!script) {
         return;
       }
-      monaco.editor.defineTheme(
-        VS_STUDIO_THEME,
-        vsStudioTheme as monacoApi.editor.IStandaloneThemeData,
-      );
+
+      for (const theme of themes) {
+        monaco.editor.defineTheme(theme.name, theme.theme);
+      }
 
       // Set eager model sync to enable intellisense between the user code and utility files
       monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
@@ -219,6 +238,7 @@ const Editor = ({
 
       // Because anything else is blasphemy.
       model.updateOptions({ tabSize: 2 });
+
       return {
         model,
       };
@@ -280,7 +300,7 @@ const Editor = ({
     <div ref={sizeRef} style={{ width: "100%", height: "100%" }}>
       <MonacoEditor
         language="typescript"
-        theme={VS_STUDIO_THEME}
+        theme={editorTheme}
         editorWillMount={willMount}
         editorDidMount={didMount}
         options={options}

@@ -14,6 +14,7 @@
 import { partition } from "lodash";
 import { ComponentType } from "react";
 
+import { Interactive } from "@foxglove/studio-base/panels/ThreeDimensionalViz/Interactions/types";
 import {
   InteractiveMarkersByType,
   WorldMarkerProps,
@@ -23,6 +24,7 @@ import {
   LAYER_INDEX_HIGHLIGHT_OVERLAY,
   LAYER_INDEX_HIGHLIGHT_BASE,
 } from "@foxglove/studio-base/panels/ThreeDimensionalViz/constants";
+import { mightActuallyBePartial } from "@foxglove/studio-base/util/mightActuallyBePartial";
 
 const withHighlights = (
   BaseWorldMarkers: ComponentType<WorldMarkerProps>,
@@ -36,16 +38,16 @@ const withHighlights = (
     const nonHighlightedMarkersByType: Partial<InteractiveMarkersByType> = {};
 
     // Partition the markersByType into two sets: highlighted and non-highlighted
-    (Object.keys(markersByType) as (keyof InteractiveMarkersByType)[]).forEach((type) => {
-      const [highlightedMarkers, nonHighlightedMarkers] = partition(
-        markersByType[type],
-        ({ interactionData }) => interactionData?.highlighted,
+    for (const [type, markers] of Object.entries(markersByType)) {
+      const [highlightedMarkers, nonHighlightedMarkers] = partition<Interactive<unknown>>(
+        markers,
+        (marker) => mightActuallyBePartial(marker).interactionData?.highlighted,
       );
 
       (highlightedMarkersByType as Record<string, unknown>)[type] = highlightedMarkers;
       (nonHighlightedMarkersByType as Record<string, unknown>)[type] = nonHighlightedMarkers;
       hasHighlightedMarkers = hasHighlightedMarkers || highlightedMarkers.length > 0;
-    });
+    }
 
     return (
       <>

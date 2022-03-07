@@ -15,10 +15,15 @@ import memoizeWeak from "memoize-weak";
 import shallowequal from "shallowequal";
 import { v4 as uuidv4 } from "uuid";
 
+import { signal } from "@foxglove/den/async";
 import Log from "@foxglove/log";
 import { Time, compare } from "@foxglove/rostime";
 import { ParameterValue } from "@foxglove/studio";
 import { GlobalVariables } from "@foxglove/studio-base/hooks/useGlobalVariables";
+import getPrettifiedCode from "@foxglove/studio-base/panels/NodePlayground/getPrettifiedCode";
+import { MemoizedLibGenerator } from "@foxglove/studio-base/players/UserNodePlayer/MemoizedLibGenerator";
+import { generateTypesLib } from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/generateTypesLib";
+import { TransformArgs } from "@foxglove/studio-base/players/UserNodePlayer/nodeTransformerWorker/types";
 import {
   Diagnostic,
   DiagnosticSeverity,
@@ -45,9 +50,8 @@ import {
 import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
 import { UserNode, UserNodes } from "@foxglove/studio-base/types/panels";
 import Rpc from "@foxglove/studio-base/util/Rpc";
-import { basicDatatypes } from "@foxglove/studio-base/util/datatypes";
+import { basicDatatypes, foxgloveDatatypes } from "@foxglove/studio-base/util/datatypes";
 import { DEFAULT_STUDIO_NODE_PREFIX } from "@foxglove/studio-base/util/globalConstants";
-import signal from "@foxglove/studio-base/util/signal";
 
 const log = Log.getLogger(__filename);
 
@@ -63,6 +67,7 @@ type UserNodeActions = {
   setUserNodeDiagnostics: (nodeId: string, diagnostics: readonly Diagnostic[]) => void;
   addUserNodeLogs: (nodeId: string, logs: readonly UserNodeLog[]) => void;
   setUserNodeRosLib: (rosLib: string) => void;
+  setUserNodeTypesLib: (lib: string) => void;
 };
 
 function maybePlainObject(rawVal: unknown) {
@@ -72,10 +77,6 @@ function maybePlainObject(rawVal: unknown) {
   return rawVal;
 }
 
-// TODO: FUTURE - Performance tests
-// TODO: FUTURE - Consider how to incorporate with existing hardcoded nodes (esp re: stories/testing)
-// 1 - Do we convert them all over to the new node format / Typescript? What about imported libraries?
-// 2 - Do we keep them in the old format for a while and support both formats?
 export default class UserNodePlayer implements Player {
   private _player: Player;
 
@@ -91,18 +92,17 @@ export default class UserNodePlayer implements Player {
   // listener for state updates
   private _listener?: (arg0: PlayerState) => Promise<void>;
 
-  // TODO: FUTURE - Terminate unused workers (some sort of timeout, for whole array or per rpc)
   // Not sure if there is perf issue with unused workers (may just go idle) - requires more research
   private _unusedNodeRuntimeWorkers: Rpc[] = [];
   private _lastPlayerStateActiveData?: PlayerStateActiveData;
   private _setUserNodeDiagnostics: (nodeId: string, diagnostics: readonly Diagnostic[]) => void;
   private _addUserNodeLogs: (nodeId: string, logs: UserNodeLog[]) => void;
-  private _setRosLib: (rosLib: string, datatypes: RosDatatypes) => void;
   private _nodeTransformRpc?: Rpc;
-  private _rosLib?: string;
-  private _rosLibDatatypes?: RosDatatypes; // the datatypes we last used to generate rosLib -- regenerate if they change
   private _globalVariables: GlobalVariables = {};
   private _pendingResetWorkers?: Promise<void>;
+  private _userNodeActions: UserNodeActions;
+  private _rosLibGenerator: MemoizedLibGenerator;
+  private _typesLibGenerator: MemoizedLibGenerator;
 
   // Player state changes when the child player invokes our player state listener
   // we may also emit state changes on internal errors
@@ -112,28 +112,35 @@ export default class UserNodePlayer implements Player {
   // a node may set its own problem or clear its problem
   private _problemStore = new Map<string, PlayerProblem>();
 
+  private _nodeRegistrationCache: {
+    nodeId: string;
+    userNode: UserNode;
+    result: NodeRegistration;
+  }[] = [];
+
   // exposed as a static to allow testing to mock/replace
   static CreateNodeTransformWorker = (): SharedWorker => {
-    return new SharedWorker(new URL("./nodeTransformerWorker/index", import.meta.url));
+    return new SharedWorker(new URL("./nodeTransformerWorker/index", import.meta.url), {
+      // Although we are using SharedWorkers, we do not actually want to share worker instances
+      // between tabs. We achieve this by passing in a unique name.
+      name: uuidv4(),
+    });
   };
 
   // exposed as a static to allow testing to mock/replace
   static CreateNodeRuntimeWorker = (): SharedWorker => {
     return new SharedWorker(new URL("./nodeRuntimeWorker/index", import.meta.url), {
-      // Although we are using SharedWorkers, each nodeRuntimeWorker uses a single global variable
-      // for the compiled `nodeCallback` function, so we need a separate worker per user node. We
-      // achieve this by passing in a unique name.
+      // Although we are using SharedWorkers, we do not actually want to share worker instances
+      // between tabs. We achieve this by passing in a unique name.
       name: uuidv4(),
     });
   };
 
   constructor(player: Player, userNodeActions: UserNodeActions) {
     this._player = player;
-    const { setUserNodeDiagnostics, addUserNodeLogs, setUserNodeRosLib } = userNodeActions;
+    this._userNodeActions = userNodeActions;
+    const { setUserNodeDiagnostics, addUserNodeLogs } = userNodeActions;
 
-    // TODO(troy): can we make the below action flow better? Might be better to
-    // just add an id, and the thing you want to update? Instead of passing in
-    // objects?
     this._setUserNodeDiagnostics = (nodeId: string, diagnostics: readonly Diagnostic[]) => {
       setUserNodeDiagnostics(nodeId, diagnostics);
     };
@@ -143,12 +150,24 @@ export default class UserNodePlayer implements Player {
       }
     };
 
-    this._setRosLib = (rosLib: string, datatypes: RosDatatypes) => {
-      this._rosLib = rosLib;
-      this._rosLibDatatypes = datatypes;
-      // We set this for the monaco editor to refer to it.
-      setUserNodeRosLib(rosLib);
-    };
+    this._typesLibGenerator = new MemoizedLibGenerator(async (args) => {
+      const lib = generateTypesLib({
+        topics: args.topics,
+        datatypes: new Map([...basicDatatypes, ...foxgloveDatatypes, ...args.datatypes]),
+      });
+
+      return await getPrettifiedCode(lib);
+    });
+
+    this._rosLibGenerator = new MemoizedLibGenerator(async (args) => {
+      const transformWorker = this._getTransformWorker();
+      return await transformWorker.send("generateRosLib", {
+        topics: args.topics,
+        // Include basic datatypes along with any custom datatypes.
+        // Custom datatypes appear as the second array items to override any basicDatatype items
+        datatypes: new Map([...basicDatatypes, ...args.datatypes]),
+      });
+    });
   }
 
   private _getTopics = memoizeWeak(
@@ -246,11 +265,6 @@ export default class UserNodePlayer implements Player {
     });
   }
 
-  private _nodeRegistrationCache: {
-    nodeId: string;
-    userNode: UserNode;
-    result: NodeRegistration;
-  }[] = [];
   // Defines the inputs/outputs and worker interface of a user node.
   private _createNodeRegistration = async (
     nodeId: string,
@@ -267,8 +281,16 @@ export default class UserNodePlayer implements Player {
     const nodeDatatypes: RosDatatypes = new Map([...basicDatatypes, ...datatypes]);
 
     const rosLib = await this._getRosLib();
+    const typesLib = await this._getTypesLib();
     const { name, sourceCode } = userNode;
-    const transformMessage = { name, sourceCode, topics, rosLib, datatypes: nodeDatatypes };
+    const transformMessage: TransformArgs = {
+      name,
+      sourceCode,
+      topics,
+      rosLib,
+      typesLib,
+      datatypes: nodeDatatypes,
+    };
     const transformWorker = this._getTransformWorker();
     const nodeData = await transformWorker.send<NodeData>("transform", transformMessage);
     const { inputTopics, outputTopic, transpiledCode, projectCode, outputDatatype } = nodeData;
@@ -281,8 +303,9 @@ export default class UserNodePlayer implements Player {
     // problems for specific userspace nodes independently of other userspace nodes.
     const problemKey = `node-id-${nodeId}`;
 
-    const processMessage = async (
-      msgEvent: MessageEvent<unknown>,
+    const processMessage: NodeRegistration["processMessage"] = async (
+      msgEvent,
+      globalVariables,
     ): Promise<MessageEvent<unknown> | undefined> => {
       // We allow _resetWorkers to "cancel" the processing by creating a new signal every time we process a message
       terminateSignal = signal<void>();
@@ -365,7 +388,7 @@ export default class UserNodePlayer implements Player {
             receiveTime: msgEvent.receiveTime,
             message: maybePlainObject(msgEvent.message),
           },
-          globalVariables: this._globalVariables,
+          globalVariables,
         }),
         terminateSignal,
       ]);
@@ -572,28 +595,34 @@ export default class UserNodePlayer implements Player {
     if (!this._lastPlayerStateActiveData) {
       throw new Error("_getRosLib was called before `_lastPlayerStateActiveData` set");
     }
-    const { topics, datatypes } = this._lastPlayerStateActiveData;
 
-    // If datatypes have not changed, we can reuse the existing rosLib
-    if (this._rosLib != undefined && this._rosLibDatatypes === datatypes) {
-      return this._rosLib;
+    const { topics, datatypes } = this._lastPlayerStateActiveData;
+    const { didUpdate, lib } = await this._rosLibGenerator.update({ topics, datatypes });
+    if (didUpdate) {
+      this._userNodeActions.setUserNodeRosLib(lib);
     }
 
-    const transformWorker = this._getTransformWorker();
-    const rosLib: string = await transformWorker.send("generateRosLib", {
-      topics,
-      // Include basic datatypes along with any custom datatypes.
-      // Custom datatypes appear as the second array items to override any basicDatatype items
-      datatypes: new Map([...basicDatatypes, ...datatypes]),
-    });
-    this._setRosLib(rosLib, datatypes);
+    return lib;
+  }
 
-    return rosLib;
+  private async _getTypesLib(): Promise<string> {
+    if (!this._lastPlayerStateActiveData) {
+      throw new Error("_getTypesLib was called before `_lastPlayerStateActiveData` set");
+    }
+
+    const { topics, datatypes } = this._lastPlayerStateActiveData;
+    const { didUpdate, lib } = await this._typesLibGenerator.update({ topics, datatypes });
+    if (didUpdate) {
+      this._userNodeActions.setUserNodeTypesLib(lib);
+    }
+
+    return lib;
   }
 
   // invoked when our child player state changes
   private async _onPlayerState(playerState: PlayerState) {
     try {
+      const globalVariables = this._globalVariables;
       const { activeData } = playerState;
       if (!activeData) {
         this._playerState = playerState;
@@ -603,11 +632,6 @@ export default class UserNodePlayer implements Player {
 
       const { messages, topics, datatypes } = activeData;
 
-      // Reset node state after seeking
-      if (activeData.lastSeekTime !== this._lastPlayerStateActiveData?.lastSeekTime) {
-        await this._resetWorkers();
-      }
-
       // If we do not have active player data from a previous call, then our
       // player just spun up, meaning we should re-run our user nodes in case
       // they have inputs that now exist in the current player context.
@@ -616,13 +640,30 @@ export default class UserNodePlayer implements Player {
         await this._resetWorkers();
         this.setSubscriptions(this._subscriptions);
         this.requestBackfill();
+      } else {
+        // Reset node state after seeking
+        let shouldReset = activeData.lastSeekTime !== this._lastPlayerStateActiveData.lastSeekTime;
+
+        // When topics or datatypes change we also need to re-build the nodes so we clear the cache
+        if (
+          activeData.topics !== this._lastPlayerStateActiveData.topics ||
+          activeData.datatypes !== this._lastPlayerStateActiveData.datatypes
+        ) {
+          shouldReset ||= true;
+          this._nodeRegistrationCache = [];
+        }
+
+        this._lastPlayerStateActiveData = activeData;
+        if (shouldReset) {
+          await this._resetWorkers();
+        }
       }
 
       const allDatatypes = this._getDatatypes(datatypes, this._memoizedNodeDatatypes);
 
       const { parsedMessages } = await this._getMessages(
         messages,
-        this._globalVariables,
+        globalVariables,
         this._nodeRegistrations,
       );
 
@@ -637,7 +678,6 @@ export default class UserNodePlayer implements Player {
       };
 
       this._playerState = newPlayerState;
-      this._lastPlayerStateActiveData = playerState.activeData;
 
       // clear any previous problem we had from making a new player state
       this._problemStore.delete("player-state-update");

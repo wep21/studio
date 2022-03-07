@@ -2,27 +2,51 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import {
-  Pivot,
-  PivotItem,
-  Stack,
-  IconButton,
-  makeStyles,
-  useTheme,
-  IButtonStyles,
-} from "@fluentui/react";
-import { ReactElement, ReactNode, useMemo } from "react";
+import { Pivot, PivotItem, useTheme } from "@fluentui/react";
+import ArrowCollapseIcon from "@mdi/svg/svg/arrow-collapse.svg";
+import { Paper, IconButton as MuiIconButton, Theme } from "@mui/material";
+import { makeStyles } from "@mui/styles";
+import cx from "classnames";
+import { ReactElement, ReactNode } from "react";
 
 import { useTooltip } from "@foxglove/studio-base/components/Tooltip";
-import { colors } from "@foxglove/studio-base/util/sharedStyleConstants";
 
 const PANE_HEIGHT = 240;
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme: Theme) => ({
+  root: {
+    position: "relative",
+    pointerEvents: "auto",
+  },
+  rootExpanded: {
+    display: "flex",
+    flexDirection: "column",
+    width: 280,
+  },
+  icon: {
+    fontSize: "1rem !important",
+
+    "& svg:not(.MuiSvgIcon-root)": {
+      fontSize: "1rem !important",
+    },
+  },
+  iconCollapse: {
+    right: 0,
+    top: 0,
+
+    "&.MuiIconButton-root": {
+      // doing this because the type will not allow !important
+      position: "absolute",
+
+      "&:hover": {
+        backgroundColor: "transparent",
+      },
+    },
+  },
   toolGroupFixedSizePanel: {
     overflowX: "hidden",
     overflowY: "auto",
-    padding: theme.spacing.s1,
+    padding: theme.spacing(1),
     maxHeight: PANE_HEIGHT,
   },
 }));
@@ -39,7 +63,7 @@ export function ToolGroupFixedSizePane({ children }: { children: ReactNode }): J
 type Props<T extends string> = {
   checked?: boolean;
   children: React.ReactElement<typeof ToolGroup>[] | React.ReactElement<typeof ToolGroup>;
-  iconName: RegisteredIconNames;
+  icon: ReactNode;
   onSelectTab: (name: T | undefined) => void;
   selectedTab?: T; // collapse the toolbar if selectedTab is undefined
   tooltip: string;
@@ -49,34 +73,19 @@ type Props<T extends string> = {
 export default function ExpandingToolbar<T extends string>({
   children,
   checked,
-  iconName,
+  icon,
   onSelectTab,
   selectedTab,
   tooltip,
   dataTest,
 }: Props<T>): JSX.Element {
+  const classes = useStyles();
   const theme = useTheme();
   const expanded = selectedTab != undefined;
 
   const expandingToolbarButton = useTooltip({
     contents: tooltip,
   });
-
-  const iconStyles = useMemo<Partial<IButtonStyles>>(
-    () => ({
-      iconChecked: { color: colors.ACCENT },
-      icon: {
-        color: theme.semanticColors.buttonText,
-
-        svg: {
-          fill: "currentColor",
-          height: "1em",
-          width: "1em",
-        },
-      },
-    }),
-    [theme.semanticColors.buttonText],
-  );
 
   if (!expanded) {
     let selectedTabLocal: T | undefined = selectedTab;
@@ -88,29 +97,18 @@ export default function ExpandingToolbar<T extends string>({
     });
 
     return (
-      <div>
+      <Paper className={classes.root} square={false} elevation={4}>
         {expandingToolbarButton.tooltip}
-        <IconButton
-          checked={checked}
-          elementRef={expandingToolbarButton.ref}
-          onClick={() => onSelectTab(selectedTabLocal)}
-          iconProps={{ iconName }}
+        <MuiIconButton
+          className={classes.icon}
+          color={checked === true ? "info" : "default"}
+          title={tooltip}
           data-test={`ExpandingToolbar-${tooltip}`}
-          styles={{
-            root: {
-              backgroundColor: theme.semanticColors.buttonBackgroundHovered,
-              pointerEvents: "auto",
-            },
-            rootHovered: { backgroundColor: theme.semanticColors.buttonBackgroundHovered },
-            rootPressed: { backgroundColor: theme.semanticColors.buttonBackgroundHovered },
-            rootDisabled: { backgroundColor: theme.semanticColors.buttonBackgroundHovered },
-            rootChecked: { backgroundColor: theme.semanticColors.buttonBackgroundHovered },
-            rootCheckedHovered: { backgroundColor: theme.semanticColors.buttonBackgroundHovered },
-            rootCheckedPressed: { backgroundColor: theme.semanticColors.buttonBackgroundHovered },
-            ...iconStyles,
-          }}
-        />
-      </div>
+          onClick={() => onSelectTab(selectedTabLocal)}
+        >
+          {icon}
+        </MuiIconButton>
+      </Paper>
     );
   }
   let selectedChild: ReactElement | undefined;
@@ -122,17 +120,11 @@ export default function ExpandingToolbar<T extends string>({
   });
 
   return (
-    <Stack
+    <Paper
+      className={cx(classes.root, classes.rootExpanded)}
       data-test={dataTest}
-      styles={{
-        root: {
-          position: "relative",
-          pointerEvents: "auto",
-          backgroundColor: theme.semanticColors.buttonBackgroundHovered,
-          borderRadius: theme.effects.roundedCorner4,
-          width: 280,
-        },
-      }}
+      square={false}
+      elevation={4}
     >
       <Pivot
         styles={{
@@ -153,22 +145,12 @@ export default function ExpandingToolbar<T extends string>({
           return <PivotItem headerText={child.props.name}>{child}</PivotItem>;
         })}
       </Pivot>
-      <IconButton
+      <MuiIconButton
         onClick={() => onSelectTab(undefined)}
-        iconProps={{ iconName: "ArrowCollapse" }}
-        styles={{
-          root: {
-            backgroundColor: "transparent",
-            position: "absolute",
-            right: 0,
-            top: 0,
-          },
-          rootHovered: { backgroundColor: "transparent" },
-          rootPressed: { backgroundColor: "transparent" },
-          rootDisabled: { backgroundColor: "transparent" },
-          ...iconStyles,
-        }}
-      />
-    </Stack>
+        className={cx(classes.icon, classes.iconCollapse)}
+      >
+        <ArrowCollapseIcon />
+      </MuiIconButton>
+    </Paper>
   );
 }

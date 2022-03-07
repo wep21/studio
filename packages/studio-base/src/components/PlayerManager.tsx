@@ -29,6 +29,7 @@ import { MessagePipelineProvider } from "@foxglove/studio-base/components/Messag
 import { useAnalytics } from "@foxglove/studio-base/context/AnalyticsContext";
 import ConsoleApiContext from "@foxglove/studio-base/context/ConsoleApiContext";
 import {
+  LayoutState,
   useCurrentLayoutActions,
   useCurrentLayoutSelector,
 } from "@foxglove/studio-base/context/CurrentLayoutContext";
@@ -58,16 +59,21 @@ const EMPTY_GLOBAL_VARIABLES: GlobalVariables = Object.freeze({});
 type PlayerManagerProps = {
   playerSources: IDataSourceFactory[];
 };
+
+const selectedLayoutSelector = (state: LayoutState) => state.selectedLayout;
+
 export default function PlayerManager(props: PropsWithChildren<PlayerManagerProps>): JSX.Element {
   const { children, playerSources } = props;
 
   useWarnImmediateReRender();
 
-  const { setUserNodeDiagnostics, addUserNodeLogs, setUserNodeRosLib } = useUserNodeState();
+  const { setUserNodeDiagnostics, addUserNodeLogs, setUserNodeRosLib, setUserNodeTypesLib } =
+    useUserNodeState();
   const userNodeActions = useShallowMemo({
     setUserNodeDiagnostics,
     addUserNodeLogs,
     setUserNodeRosLib,
+    setUserNodeTypesLib,
   });
 
   const isMounted = useMountedState();
@@ -88,19 +94,13 @@ export default function PlayerManager(props: PropsWithChildren<PlayerManagerProp
   const layoutStorage = useLayoutManager();
   const { setSelectedLayoutId } = useCurrentLayoutActions();
 
-  const userNodes = useCurrentLayoutSelector(
-    (state) => state.selectedLayout?.data?.userNodes ?? EMPTY_USER_NODES,
-  );
-
   const [basePlayer, setBasePlayer] = useState<Player | undefined>();
 
-  const globalVariables = useCurrentLayoutSelector(
-    (state) => state.selectedLayout?.data?.globalVariables ?? EMPTY_GLOBAL_VARIABLES,
-  );
+  const selectedLayout = useCurrentLayoutSelector(selectedLayoutSelector);
 
-  const messageOrder = useCurrentLayoutSelector(
-    (state) => state.selectedLayout?.data?.playbackConfig.messageOrder ?? DEFAULT_MESSAGE_ORDER,
-  );
+  const messageOrder = selectedLayout?.data?.playbackConfig.messageOrder ?? DEFAULT_MESSAGE_ORDER;
+  const userNodes = selectedLayout?.data?.userNodes ?? EMPTY_USER_NODES;
+  const globalVariables = selectedLayout?.data?.globalVariables ?? EMPTY_GLOBAL_VARIABLES;
 
   const { recents, addRecent } = useIndexedDbRecents();
 
@@ -205,7 +205,7 @@ export default function PlayerManager(props: PropsWithChildren<PlayerManagerProp
               addRecent({
                 type: "connection",
                 sourceId: foundSource.id,
-                title: args.params?.url,
+                title: args.params.url,
                 label: foundSource.displayName,
                 extra: args.params,
               });

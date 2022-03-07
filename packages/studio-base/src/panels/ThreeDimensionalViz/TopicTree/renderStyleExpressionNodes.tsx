@@ -169,7 +169,6 @@ function StyleExpressionNode(props: {
             onAltToggle={() => updateSettingsForGlobalVariable(name, { active: !active, color })}
             onToggle={() => updateSettingsForGlobalVariable(name, { active: !active, color })}
             overrideColor={color}
-            size="SMALL"
             visibleInScene={active}
             onMouseEnter={() =>
               setHoveredMarkerMatchers([{ topic, checks: [{ markerKeyPath, value }] }])
@@ -196,12 +195,12 @@ function StyleExpressionNode(props: {
               <SItemContent>
                 <span style={{ paddingRight: 8 }}>Marker color</span>
                 <ColorPicker
-                  color={colorOverride?.color}
+                  color={colorOverride.color}
                   buttonShape={"circle"}
                   onChange={(newColor) => {
                     updateSettingsForGlobalVariable(name, {
                       color: newColor,
-                      active: colorOverride?.active,
+                      active: colorOverride.active,
                     });
                   }}
                 />

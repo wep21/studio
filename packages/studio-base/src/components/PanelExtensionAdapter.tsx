@@ -174,9 +174,8 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
     const renderState: RenderState = prevRenderState.current;
 
     if (watchedFieldsRef.current.has("currentFrame")) {
-      const currentFrame = playerState?.activeData?.messages.filter((messageEvent) => {
-        return subscribedTopicsRef.current.has(messageEvent.topic);
-      });
+      const currentFrame = ctx?.messageEventsBySubscriberId.get(panelId);
+
       // If there are new frames we render
       // If there are old frames we render (new frames either replace old or no new frames)
       // Note: renderState.currentFrame.length !== currentFrame.length is wrong because it
@@ -279,7 +278,7 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
     } catch (err) {
       setError(err);
     }
-  }, [colorScheme, renderFn]);
+  }, [colorScheme, panelId, renderFn]);
 
   const queueRender = useCallback(() => {
     if (!renderFn || rafRequestedRef.current != undefined) {
@@ -335,6 +334,7 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
   const partialExtensionContext = useMemo<PartialPanelExtensionContext>(() => {
     const layout: PanelExtensionContext["layout"] = {
       addPanel({ position, type, updateIfExists, getState }) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (position === "sibling") {
           openSiblingPanel({
             panelType: type,
@@ -386,9 +386,7 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
       },
 
       subscribe: (topics: string[]) => {
-        if (topics.length === 0) {
-          return;
-        }
+        subscribedTopicsRef.current.clear();
 
         // If the player has loaded all the blocks, the blocks reference won't change so our message
         // pipeline handler for allFrames won't create a new set of all frames for the newly
@@ -402,7 +400,9 @@ function PanelExtensionAdapter(props: PanelExtensionAdapterProps): JSX.Element {
           subscribedTopicsRef.current.add(topic);
         }
 
-        requestBackfill();
+        if (topics.length > 0) {
+          requestBackfill();
+        }
       },
 
       advertise: capabilities.includes(PlayerCapabilities.advertise)

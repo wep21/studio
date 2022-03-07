@@ -10,7 +10,9 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
-import { Link, makeStyles, Stack, Text, useTheme } from "@fluentui/react";
+import { Link, Text, useTheme } from "@fluentui/react";
+import { Box } from "@mui/material";
+import { makeStyles } from "@mui/styles";
 import { extname } from "path";
 import {
   useState,
@@ -52,10 +54,14 @@ import Preferences from "@foxglove/studio-base/components/Preferences";
 import RemountOnValueChange from "@foxglove/studio-base/components/RemountOnValueChange";
 import Sidebar, { SidebarItem } from "@foxglove/studio-base/components/Sidebar";
 import { SidebarContent } from "@foxglove/studio-base/components/SidebarContent";
+import Stack from "@foxglove/studio-base/components/Stack";
 import { URLStateSyncAdapter } from "@foxglove/studio-base/components/URLStateSyncAdapter";
 import { useAssets } from "@foxglove/studio-base/context/AssetsContext";
 import ConsoleApiContext from "@foxglove/studio-base/context/ConsoleApiContext";
-import { useCurrentLayoutSelector } from "@foxglove/studio-base/context/CurrentLayoutContext";
+import {
+  LayoutState,
+  useCurrentLayoutSelector,
+} from "@foxglove/studio-base/context/CurrentLayoutContext";
 import { useCurrentUser } from "@foxglove/studio-base/context/CurrentUserContext";
 import { useExtensionLoader } from "@foxglove/studio-base/context/ExtensionLoaderContext";
 import { useHelpInfo } from "@foxglove/studio-base/context/HelpInfoContext";
@@ -103,11 +109,13 @@ type SidebarItemKey =
   | "preferences"
   | "help";
 
+const selectedLayoutIdSelector = (state: LayoutState) => state.selectedLayout?.id;
+
 function AddPanel() {
   const addPanel = useAddPanel();
   const { openLayoutBrowser } = useWorkspace();
   const theme = useTheme();
-  const selectedLayoutId = useCurrentLayoutSelector((state) => state.selectedLayout?.id);
+  const selectedLayoutId = useCurrentLayoutSelector(selectedLayoutIdSelector);
 
   return (
     <SidebarContent
@@ -120,7 +128,7 @@ function AddPanel() {
           <Link onClick={openLayoutBrowser}>Select a layout</Link> to get started!
         </Text>
       ) : (
-        <PanelList onPanelSelect={addPanel} />
+        <PanelList onPanelSelect={addPanel} backgroundColor={theme.palette.neutralLighterAlt} />
       )}
     </SidebarContent>
   );
@@ -204,10 +212,13 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
 
   // When a player is activated, hide the open dialog.
   useLayoutEffect(() => {
-    if (isPlayerPresent) {
+    if (
+      playerPresence === PlayerPresence.PRESENT ||
+      playerPresence === PlayerPresence.INITIALIZING
+    ) {
       setShowOpenDialog(undefined);
     }
-  }, [isPlayerPresent]);
+  }, [playerPresence]);
 
   const { setHelpInfo } = useHelpInfo();
 
@@ -346,6 +357,7 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
           const extension = await extensionLoader.installExtension(data);
           addToast(`Installed extension ${extension.id}`, { appearance: "success" });
         } catch (err) {
+          log.error(err);
           addToast(`Failed to install extension ${file.name}: ${err.message}`, {
             appearance: "error",
           });
@@ -356,7 +368,8 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
             return;
           }
         } catch (err) {
-          addToast(`Failed to load ${file.name}`, {
+          log.error(err);
+          addToast(`Failed to load ${file.name}: ${err.message}`, {
             appearance: "error",
           });
         }
@@ -391,6 +404,7 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
             const extension = await extensionLoader.installExtension(data);
             addToast(`Installed extension ${extension.id}`, { appearance: "success" });
           } catch (err) {
+            log.error(err);
             addToast(`Failed to install extension ${file.name}: ${err.message}`, {
               appearance: "error",
             });
@@ -401,7 +415,8 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
               otherFiles.push(file);
             }
           } catch (err) {
-            addToast(`Failed to load ${file.name}`, {
+            log.error(err);
+            addToast(`Failed to load ${file.name}: ${err.message}`, {
               appearance: "error",
             });
           }
@@ -540,8 +555,8 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
     >
       {enableOpenDialog === true && showOpenDialog != undefined && (
         <OpenDialog
-          activeView={showOpenDialog?.view}
-          activeDataSource={showOpenDialog?.activeDataSource}
+          activeView={showOpenDialog.view}
+          activeDataSource={showOpenDialog.activeDataSource}
           onDismiss={() => setShowOpenDialog(undefined)}
         />
       )}
@@ -563,7 +578,7 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
             <Stack>
               <PanelLayout />
               {play && pause && seek && (
-                <Stack.Item disableShrink>
+                <Box flexShrink={0}>
                   <PlaybackControls
                     play={play}
                     pause={pause}
@@ -571,7 +586,7 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
                     isPlaying={isPlaying}
                     getTimeInfo={getTimeInfo}
                   />
-                </Stack.Item>
+                </Box>
               )}
             </Stack>
           </RemountOnValueChange>

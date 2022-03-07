@@ -199,6 +199,25 @@ type ComponentConstructorType<P> = { displayName?: string } & (
   | { (props: P): React.ReactElement<unknown> | ReactNull }
 );
 
+const areConfigKeysEqual = (
+  firstConfig: Record<string, unknown>,
+  secondConfig: Record<string, unknown>,
+): boolean => {
+  const firstConfigKeys = Object.keys(firstConfig).sort();
+  const secondConfigKeys = Object.keys(secondConfig).sort();
+
+  if (firstConfigKeys.length !== secondConfigKeys.length) {
+    return false;
+  }
+
+  for (let i = 0; i < firstConfigKeys.length; i++) {
+    if (firstConfigKeys[i] !== secondConfigKeys[i]) {
+      return false;
+    }
+  }
+  return true;
+};
+
 // HOC that wraps panel in an error boundary and flex box.
 // Gives panel a `config` and `saveConfig`.
 //   export default Panel(MyPanelComponent)
@@ -281,6 +300,8 @@ export default function Panel<
       if ((!savedConfig || Object.keys(savedConfig).length === 0) && !savedDefaultConfig.current) {
         savedDefaultConfig.current = true;
         saveConfig(defaultConfig);
+      } else if (savedConfig && !areConfigKeysEqual(savedConfig, defaultConfig)) {
+        saveConfig({ ...defaultConfig, ...savedConfig });
       }
     }, [defaultConfig, saveConfig, savedConfig]);
 
@@ -486,6 +507,8 @@ export default function Panel<
       [cmdKeyPressed, parentPanelContext],
     );
 
+    // We use two separate sets of key handlers because the panel context and exitFullScreen
+    // change often and invalidate our key handlers during user interactions.
     const { keyUpHandlers, keyDownHandlers } = useMemo(
       () => ({
         keyUpHandlers: {
@@ -504,11 +527,17 @@ export default function Panel<
           "`": () => setQuickActionsKeyPressed(true),
           "~": () => setQuickActionsKeyPressed(true),
           Shift: () => setShiftKeyPressed(true),
-          Escape: () => exitFullscreen(),
           Meta: () => setCmdKeyPressed(true),
         },
       }),
-      [selectAllPanels, cmdKeyPressed, exitFullscreen],
+      [selectAllPanels, cmdKeyPressed],
+    );
+
+    const fullScreenKeyHandlers = useMemo(
+      () => ({
+        Escape: () => exitFullscreen(),
+      }),
+      [exitFullscreen],
     );
 
     /* Ensure user exits full-screen mode when leaving window, even if key is still pressed down */
@@ -589,6 +618,7 @@ export default function Panel<
           }}
         >
           <KeyListener global keyUpHandlers={keyUpHandlers} keyDownHandlers={keyDownHandlers} />
+          <KeyListener global keyDownHandlers={fullScreenKeyHandlers} />
           <PanelRoot
             onClick={onPanelRootClick}
             onMouseMove={onMouseMove}

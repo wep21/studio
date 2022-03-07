@@ -7,10 +7,10 @@ import { useCallback } from "react";
 
 import { useTooltip } from "@foxglove/studio-base/components/Tooltip";
 import {
+  LayoutState,
   useCurrentLayoutActions,
   useCurrentLayoutSelector,
 } from "@foxglove/studio-base/context/CurrentLayoutContext";
-import { defaultPlaybackConfig } from "@foxglove/studio-base/providers/CurrentLayoutProvider/reducers";
 import { TimestampMethod } from "@foxglove/studio-base/util/time";
 
 const messageOrderLabel = {
@@ -18,11 +18,12 @@ const messageOrderLabel = {
   headerStamp: "Header stamp",
 };
 
+const messageOrderSelector = (state: LayoutState) =>
+  state.selectedLayout?.data?.playbackConfig.messageOrder ?? "receiveTime";
+
 export default function MessageOrderControls(): JSX.Element {
   const theme = useTheme();
-  const messageOrder = useCurrentLayoutSelector(
-    (state) => state.selectedLayout?.data?.playbackConfig.messageOrder ?? "receiveTime",
-  );
+  const messageOrder = useCurrentLayoutSelector(messageOrderSelector);
   const { setPlaybackConfig } = useCurrentLayoutActions();
 
   const setMessageOrder = useCallback(
@@ -32,7 +33,7 @@ export default function MessageOrderControls(): JSX.Element {
     [setPlaybackConfig],
   );
 
-  const orderText = messageOrderLabel[messageOrder] ?? defaultPlaybackConfig.messageOrder;
+  const orderText = messageOrderLabel[messageOrder];
   const messageOrderTooltip = useTooltip({
     contents: `Order messages by ${orderText.toLowerCase()}`,
   });

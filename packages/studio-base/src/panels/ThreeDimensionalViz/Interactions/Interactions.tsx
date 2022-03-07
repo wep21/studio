@@ -11,8 +11,10 @@
 //   found at http://www.apache.org/licenses/LICENSE-2.0
 //   You may not use this file except in compliance with the License.
 
+import { Checkbox } from "@fluentui/react";
+import CursorIcon from "@mdi/svg/svg/cursor-default.svg";
+
 import { MouseEventObject } from "@foxglove/regl-worldview";
-import Checkbox from "@foxglove/studio-base/components/Checkbox";
 import ExpandingToolbar, {
   ToolGroup,
   ToolGroupFixedSizePane,
@@ -26,6 +28,7 @@ import { getInteractionData } from "@foxglove/studio-base/panels/ThreeDimensiona
 import { ThreeDimensionalVizConfig } from "@foxglove/studio-base/panels/ThreeDimensionalViz/types";
 import { PointCloud2 } from "@foxglove/studio-base/types/Messages";
 import { SaveConfig, PanelConfig } from "@foxglove/studio-base/types/panels";
+import { maybeCast } from "@foxglove/studio-base/util/maybeCast";
 
 import LinkedGlobalVariableList from "./LinkedGlobalVariableList";
 import PointCloudDetails from "./PointCloudDetails";
@@ -59,7 +62,7 @@ const InteractionsBaseComponent = React.memo<PropsWithConfig>(function Interacti
 
   const { originalMessage } = selectedInteractionData ?? {};
 
-  const isPointCloud = (object as { type?: number })?.type === 102;
+  const isPointCloud = maybeCast<{ type?: number }>(object)?.type === 102;
   const maybeFullyDecodedObject = React.useMemo(
     () =>
       isPointCloud
@@ -73,7 +76,7 @@ const InteractionsBaseComponent = React.memo<PropsWithConfig>(function Interacti
   return (
     <ExpandingToolbar
       tooltip="Inspect objects"
-      iconName="CursorDefault"
+      icon={<CursorIcon />}
       selectedTab={interactionsTabType}
       onSelectTab={(newSelectedTab) => setInteractionsTabType(newSelectedTab)}
     >
@@ -105,6 +108,11 @@ const InteractionsBaseComponent = React.memo<PropsWithConfig>(function Interacti
             onChange={() =>
               saveConfig({ disableAutoOpenClickedObject: !disableAutoOpenClickedObject })
             }
+            styles={{
+              checkmark: { fontSize: 9, lineHeight: 14, ".is-checked &": { color: "#fff" } },
+              checkbox: { height: 14, width: 14, marginTop: 2 },
+              text: { fontSize: 12 },
+            }}
           />
         </ToolGroupFixedSizePane>
       </ToolGroup>

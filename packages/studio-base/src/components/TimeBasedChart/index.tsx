@@ -126,6 +126,7 @@ export type Props = {
   // If the x axis represents playback time ("timestamp"), the hover cursor will be synced.
   // Note, this setting should not be used for other time values.
   xAxisIsPlaybackTime: boolean;
+  showXAxisLabels: boolean;
   plugins?: ChartOptions["plugins"];
   currentTime?: number;
   defaultView?: ChartDefaultView;
@@ -152,6 +153,7 @@ export default function TimeBasedChart(props: Props): JSX.Element {
     defaultView,
     currentTime,
     xAxisIsPlaybackTime,
+    showXAxisLabels,
   } = props;
 
   const { labels, datasets } = data;
@@ -522,13 +524,21 @@ export default function TimeBasedChart(props: Props): JSX.Element {
       min: minX,
       max: maxX,
       ticks: {
+        display: showXAxisLabels,
         ...defaultXTicksSettings,
         ...xAxes?.ticks,
       },
     };
 
     return scale;
-  }, [theme.palette.neutralSecondary, theme.palette.neutralLighter, xAxes, minX, maxX]);
+  }, [
+    theme.palette.neutralSecondary,
+    showXAxisLabels,
+    theme.palette.neutralLighter,
+    xAxes,
+    minX,
+    maxX,
+  ]);
 
   const yScale = useMemo<ScaleOptions>(() => {
     const defaultYTicksSettings: ScaleOptions["ticks"] = {
@@ -576,7 +586,7 @@ export default function TimeBasedChart(props: Props): JSX.Element {
             y: { min: number; max: number };
           }
         | undefined = undefined;
-      if (currentScales?.x && currentScales?.y) {
+      if (currentScales?.x && currentScales.y) {
         bounds = {
           width,
           height,
@@ -660,7 +670,7 @@ export default function TimeBasedChart(props: Props): JSX.Element {
   }, [datasets, linesToHide]);
 
   // throttle the downsampleDatasets callback since this is an input to the downsampledData memo
-  // avoids down a downsample if the callback changes rapidly
+  // avoids doing a downsample if the callback changes rapidly
   const throttledDownsample = useThrottle(() => downsampleDatasets, 100);
 
   // downsample datasets with the latest downsample function
@@ -720,13 +730,13 @@ export default function TimeBasedChart(props: Props): JSX.Element {
       queueDownsampleInvalidate();
 
       // chart indicated we got a scales update, we may need to update global bounds
-      if (!isSynced || !scales?.x) {
+      if (!isSynced || !scales.x) {
         return;
       }
 
       // the change is a result of user interaction on our chart
       // we set the sync scale value so other synced charts follow our zoom/pan behavior
-      if (userInteraction && isSynced) {
+      if (userInteraction) {
         setGlobalBounds({
           min: scales.x.min,
           max: scales.x.max,
@@ -740,7 +750,7 @@ export default function TimeBasedChart(props: Props): JSX.Element {
       // the sync value is conditionally set depending on the state of the existing sync value
       setGlobalBounds((old) => {
         // no scale from our plot, always use old value
-        const scalesX = scales?.x;
+        const scalesX = scales.x;
         if (!scalesX) {
           return old;
         }
