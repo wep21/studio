@@ -46,10 +46,40 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@amplitude/identify@npm:1.9.2, @amplitude/identify@npm:^1.9.2":
+  version: 1.9.2
+  resolution: "@amplitude/identify@npm:1.9.2"
+  dependencies:
+    "@amplitude/types": ^1.9.2
+    "@amplitude/utils": ^1.9.2
+    tslib: ^1.9.3
+  checksum: 791f7a733f1946751c560d4e93394326fa201d5bd0be9c74e361dd29d41e6043194aba6bcca6e28e7c1d83a85e1e7820858da89964a0b2aba03f25d525ce43cf
+  languageName: node
+  linkType: hard
+
+"@amplitude/node@npm:1.9.2":
+  version: 1.9.2
+  resolution: "@amplitude/node@npm:1.9.2"
+  dependencies:
+    "@amplitude/identify": ^1.9.2
+    "@amplitude/types": ^1.9.2
+    "@amplitude/utils": ^1.9.2
+    tslib: ^1.9.3
+  checksum: f03b3ee6877a27ad6216607851a5d2bafc19105dbe94792c796cecc4792453fc02c60f69352ce1cd0174c9db91a186f6b4f53e56b22ba67d074a5e84c07f2459
+  languageName: node
+  linkType: hard
+
 "@amplitude/types@npm:^1.9.1":
   version: 1.9.1
   resolution: "@amplitude/types@npm:1.9.1"
   checksum: d8dc2236e9cf88277e4c85f5c451279b09bf281e0d0f119cb5b414e9d0592e82c6c1a5ef63d300f078fac04e89859c0d7d2e241e05f82a845741fbcbdaa67a4b
+  languageName: node
+  linkType: hard
+
+"@amplitude/types@npm:^1.9.2":
+  version: 1.9.2
+  resolution: "@amplitude/types@npm:1.9.2"
+  checksum: fb4e4823f6fece840a219ff62835015407acc463297730ac13b5ef7e0d4f83f52e344b2cb6868d9c8592b6f9286454b0531f3ab9e4a6b845b247590fb51fdaee
   languageName: node
   linkType: hard
 
@@ -67,6 +97,16 @@ __metadata:
     "@amplitude/types": ^1.9.1
     tslib: ^1.9.3
   checksum: ff2d11ba223c176710df5dddfb4e1a2928425f61be923f13e99e6880ce80483295585884b0caf655835e879b0c636667f6b55451324aadc7fd8f1b1b40ac8829
+  languageName: node
+  linkType: hard
+
+"@amplitude/utils@npm:^1.9.2":
+  version: 1.9.2
+  resolution: "@amplitude/utils@npm:1.9.2"
+  dependencies:
+    "@amplitude/types": ^1.9.2
+    tslib: ^1.9.3
+  checksum: 46f59a19c70c60da36a669dee743e759d774712d37df6e8294ea1f7e094498a95809511dafc1fb85423c5915fe7c44ff62b8f4f48c50b9a3fe7ae7eb993fe86d
   languageName: node
   linkType: hard
 
@@ -2498,6 +2538,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@foxglove/studio-base@workspace:packages/studio-base"
   dependencies:
+    "@amplitude/identify": 1.9.2
+    "@amplitude/node": 1.9.2
     "@emotion/react": 11.7.1
     "@emotion/styled": 11.6.0
     "@fluentui/react": 8.55.0
@@ -2592,6 +2634,7 @@ __metadata:
     cross-env: 7.0.3
     crypto-browserify: 3.12.0
     css-loader: 6.6.0
+    csv-parse: 5.0.4
     cytoscape: 3.21.0
     cytoscape-dagre: 2.4.0
     enzyme: 3.11.0
@@ -10192,6 +10235,13 @@ __metadata:
   version: 3.0.10
   resolution: "csstype@npm:3.0.10"
   checksum: 20a8fa324f2b33ddf94aa7507d1b6ab3daa6f3cc308888dc50126585d7952f2471de69b2dbe0635d1fdc31223fef8e070842691877e725caf456e2378685a631
+  languageName: node
+  linkType: hard
+
+"csv-parse@npm:5.0.4":
+  version: 5.0.4
+  resolution: "csv-parse@npm:5.0.4"
+  checksum: e38b4fb8dec7a64b891d78ab3cf7f59b721e4027e3c773a2b0311dc538a82681f4f01aaa03c209ac47eb37e26c00a1134bf3844ade1685bf53ce85ffb17a63e3
   languageName: node
   linkType: hard
 

@@ -25,6 +25,8 @@
     "build:webpack": "cross-env TS_NODE_PROJECT=\"tsconfig.cli.json\" webpack --mode production --progress"
   },
   "devDependencies": {
+    "@amplitude/identify": "1.9.2",
+    "@amplitude/node": "1.9.2",
     "@emotion/react": "11.7.1",
     "@emotion/styled": "11.6.0",
     "@fluentui/react": "8.55.0",
@@ -119,6 +121,7 @@
     "cross-env": "7.0.3",
     "crypto-browserify": "3.12.0",
     "css-loader": "6.6.0",
+    "csv-parse": "5.0.4",
     "cytoscape": "3.21.0",
     "cytoscape-dagre": "2.4.0",
     "enzyme": "3.11.0",
