@@ -347,6 +347,8 @@ export default function TimeBasedChart(props: Props): JSX.Element {
           y: canvasRect.top + mouseYRef.current,
           data: tooltipItems.map((item) => item.item),
         });
+
+        // fixme - call a prop to provide the hovered data
       }
     },
     [tooltipLookup],

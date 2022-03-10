@@ -14,14 +14,12 @@ import { getLineColor } from "@foxglove/studio-base/util/plotColors";
 import { TimestampMethod } from "@foxglove/studio-base/util/time";
 
 import { isReferenceLinePlotPathType, PlotPath } from "./internalTypes";
-import { PlotConfig, PlotXAxisVal } from "./types";
+import { PlotXAxisVal } from "./types";
 
 type PathSettingsModalProps = {
   xAxisVal: PlotXAxisVal;
   path: PlotPath;
-  paths: PlotPath[];
   index: number;
-  saveConfig: (arg0: Partial<PlotConfig>) => void;
   onDismiss: () => void;
 };
 
@@ -36,25 +34,22 @@ const useStyles = makeStyles((theme: Theme) => ({
 export default function PathSettingsModal({
   xAxisVal,
   path,
-  paths,
   index,
-  saveConfig,
   onDismiss,
 }: PathSettingsModalProps): JSX.Element {
   const classes = useStyles();
   const hostId = useDialogHostId();
 
-  const savePathConfig = useCallback(
-    (newConfig: Partial<PlotPath>) => {
+  const savePathConfig = useCallback((newConfig: Partial<PlotPath>) => {
+    /*
       const newPaths = paths.slice();
       const newPath = newPaths[index];
       if (newPath) {
         newPaths[index] = { ...newPath, ...newConfig };
       }
       saveConfig({ paths: newPaths });
-    },
-    [paths, index, saveConfig],
-  );
+      */
+  }, []);
 
   const resetToDefaults = useCallback(() => {
     savePathConfig({ color: undefined });

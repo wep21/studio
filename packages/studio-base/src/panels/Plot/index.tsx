@@ -275,31 +275,48 @@ function Plot(props: Props) {
     return getBlockItemsByPath(decodeMessagePathsForMessagesByTopic, blocks);
   }, [blocks, decodeMessagePathsForMessagesByTopic, showSingleCurrentMessage]);
 
+  type ReducedValue = {
+    plotDataByPath: PlotDataByPath;
+    latestValueByPath: {
+      [path: string]: number;
+    };
+  };
+
   // When restoring, keep only the paths that are present in allPaths.
   // Without this, the reducer value will grow unbounded with new paths as users add/remove series.
   const restore = useCallback(
-    (previous?: PlotDataByPath): PlotDataByPath => {
+    (previous?: ReducedValue): ReducedValue => {
       if (!previous) {
-        return {};
+        return {
+          plotDataByPath: {},
+          latestValueByPath: {},
+        };
       }
 
       const updated: PlotDataByPath = {};
+      const previousPlotData = previous.plotDataByPath;
       for (const path of allPaths) {
-        const plotData = previous[path];
+        const plotData = previousPlotData[path];
         if (plotData) {
           updated[path] = plotData;
         }
       }
 
-      return updated;
+      return {
+        plotDataByPath: updated,
+        latestValueByPath: {},
+      };
     },
     [allPaths],
   );
 
   const addMessages = useCallback(
-    (accumulated: PlotDataByPath, msgEvents: readonly MessageEvent<unknown>[]) => {
+    (reducedValue: ReducedValue, msgEvents: readonly MessageEvent<unknown>[]) => {
       const lastEventTime = msgEvents[msgEvents.length - 1]?.receiveTime;
       const isFollowing = followingView?.type === "following";
+
+      const reducedPlotDataByPath = reducedValue.plotDataByPath;
+      const reducedLatestValueByPath = reducedValue.latestValueByPath;
 
       // If we don't change any accumulated data, avoid returning a new "accumulated" object so
       // react hooks remain stable.
@@ -312,14 +329,18 @@ function Plot(props: Props) {
         }
 
         for (const path of paths) {
-          // Skip any paths we already service in plotDataForBlocks.
-          // We don't need to accumulate these because the block data takes precedence.
-          if (path in plotDataForBlocks) {
+          const dataItem = cachedGetMessagePathDataItems(path, msgEvent);
+          if (!dataItem) {
             continue;
           }
 
-          const dataItem = cachedGetMessagePathDataItems(path, msgEvent);
-          if (!dataItem) {
+          if (dataItem.length === 1 && typeof dataItem[0]!.value === "number") {
+            reducedLatestValueByPath[path] = dataItem[0]!.value;
+          }
+
+          // Skip any paths we already service in plotDataForBlocks.
+          // We don't need to accumulate these because the block data takes precedence.
+          if (path in plotDataForBlocks) {
             continue;
           }
 
@@ -333,9 +354,9 @@ function Plot(props: Props) {
           changed = true;
 
           if (showSingleCurrentMessage) {
-            accumulated[path] = [[plotDataItem]];
+            reducedPlotDataByPath[path] = [[plotDataItem]];
           } else {
-            const plotDataPath = (accumulated[path] ??= [[]]);
+            const plotDataPath = (reducedPlotDataByPath[path] ??= [[]]);
             // PlotDataPaths have 2d arrays of items to accomodate blocks which may have gaps so
             // each continuous set of blocks forms one continuous line. For streaming messages we
             // treat this as one continuous set of items and always add to the first "range"
@@ -357,10 +378,13 @@ function Plot(props: Props) {
       }
 
       if (!changed) {
-        return accumulated;
+        return reducedValue;
       }
 
-      return { ...accumulated };
+      return {
+        plotDataByPath: { ...reducedPlotDataByPath },
+        latestValueByPath: { ...reducedLatestValueByPath },
+      };
     },
     [
       plotDataForBlocks,
@@ -371,7 +395,7 @@ function Plot(props: Props) {
     ],
   );
 
-  const plotDataByPath = useMessageReducer<PlotDataByPath>({
+  const { plotDataByPath, latestValueByPath } = useMessageReducer<ReducedValue>({
     topics: subscribeTopics,
     preloadType: "full",
     restore,
@@ -461,15 +485,13 @@ function Plot(props: Props) {
       <Stack direction={stackDirection} flex="auto" width="100%" height="100%">
         <PlotLegend
           paths={yAxisPaths}
-          datasets={datasets}
-          currentTime={currentTimeSinceStart}
+          pathValues={latestValueByPath}
           saveConfig={saveConfig}
           showLegend={showLegend}
           xAxisVal={xAxisVal}
           xAxisPath={xAxisPath}
           pathsWithMismatchedDataLengths={pathsWithMismatchedDataLengths}
           legendDisplay={legendDisplay}
-          showPlotValuesInLegend={showPlotValuesInLegend}
           sidebarDimension={sidebarDimension}
         />
         <Stack flex="auto" alignItems="center" justifyContent="center" overflow="hidden">

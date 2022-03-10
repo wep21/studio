@@ -380,6 +380,21 @@ LineGraph.parameters = {
   useReadySignal: true,
 };
 
+export function LineGraphWithValuesInLegend(): JSX.Element {
+  const readySignal = useReadySignal({ count: 3 });
+  const pauseFrame = useCallback(() => readySignal, [readySignal]);
+  return (
+    <PlotWrapper
+      pauseFrame={pauseFrame}
+      config={{ ...exampleConfig, showPlotValuesInLegend: true }}
+    />
+  );
+}
+LineGraphWithValuesInLegend.parameters = {
+  colorScheme: "light",
+  useReadySignal: true,
+};
+
 LineGraphWithLegendsHidden.storyName = "line graph with legends hidden";
 export function LineGraphWithLegendsHidden(): JSX.Element {
   const readySignal = useReadySignal({ count: 3 });

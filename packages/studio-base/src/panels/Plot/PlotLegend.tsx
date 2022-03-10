@@ -23,12 +23,11 @@ import { Button, IconButton, Theme, alpha } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import cx from "classnames";
 import { last } from "lodash";
-import { ComponentProps, useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 
 import Dropdown from "@foxglove/studio-base/components/Dropdown";
 import DropdownItem from "@foxglove/studio-base/components/Dropdown/DropdownItem";
 import MessagePathInput from "@foxglove/studio-base/components/MessagePathSyntax/MessagePathInput";
-import TimeBasedChart from "@foxglove/studio-base/components/TimeBasedChart";
 import PlotLegendRow from "@foxglove/studio-base/panels/Plot/PlotLegendRow";
 
 import { PlotPath, BasePlotPath, isReferenceLinePlotPathType } from "./internalTypes";
@@ -39,8 +38,7 @@ const maxLegendWidth = 800;
 
 type PlotLegendProps = {
   paths: PlotPath[];
-  datasets: ComponentProps<typeof TimeBasedChart>["data"]["datasets"];
-  currentTime?: number;
+  pathValues: { [path: string]: number };
   saveConfig: (arg0: Partial<PlotConfig>) => void;
   showLegend: boolean;
   xAxisVal: PlotXAxisVal;
@@ -48,7 +46,6 @@ type PlotLegendProps = {
   pathsWithMismatchedDataLengths: string[];
   sidebarDimension: number;
   legendDisplay: "floating" | "top" | "left";
-  showPlotValuesInLegend: boolean;
 };
 
 const shortXAxisLabel = (path: PlotXAxisVal): string => {
@@ -68,7 +65,6 @@ const shortXAxisLabel = (path: PlotXAxisVal): string => {
 type StyleProps = {
   legendDisplay: PlotLegendProps["legendDisplay"];
   showLegend: PlotLegendProps["showLegend"];
-  showPlotValuesInLegend?: PlotLegendProps["showPlotValuesInLegend"];
   sidebarDimension: PlotLegendProps["sidebarDimension"];
 };
 
@@ -129,15 +125,12 @@ const useStyles = makeStyles((theme: Theme) => ({
     alignItems: "stretch",
     position: "relative",
     display: "grid",
-    gridTemplateColumns: ({ showPlotValuesInLegend = false }: StyleProps) =>
-      [
-        "auto",
-        "minmax(max-content, 1fr)",
-        showPlotValuesInLegend && "minmax(max-content, 1fr)",
-        "auto",
-      ]
-        .filter(Boolean)
-        .join(" "),
+    gridTemplateColumns: [
+      "auto",
+      "minmax(max-content, 1fr)",
+      "minmax(max-content, 1fr)",
+      "auto",
+    ].join(" "),
   },
   header: {
     display: "flex",
@@ -228,8 +221,6 @@ const useStyles = makeStyles((theme: Theme) => ({
 export default function PlotLegend(props: PlotLegendProps): JSX.Element {
   const {
     paths,
-    datasets,
-    currentTime,
     saveConfig,
     showLegend,
     xAxisVal,
@@ -237,14 +228,13 @@ export default function PlotLegend(props: PlotLegendProps): JSX.Element {
     pathsWithMismatchedDataLengths,
     sidebarDimension,
     legendDisplay,
-    showPlotValuesInLegend,
+    pathValues,
   } = props;
   const lastPath = last(paths);
   const classes = useStyles({
     legendDisplay,
     sidebarDimension,
     showLegend,
-    showPlotValuesInLegend,
   });
 
   const toggleLegend = useCallback(
@@ -330,12 +320,8 @@ export default function PlotLegend(props: PlotLegendProps): JSX.Element {
               index={index}
               xAxisVal={xAxisVal}
               path={path}
-              paths={paths}
+              value={pathValues[path.value]}
               hasMismatchedDataLength={pathsWithMismatchedDataLengths.includes(path.value)}
-              datasets={datasets}
-              currentTime={currentTime}
-              saveConfig={saveConfig}
-              showPlotValuesInLegend={showPlotValuesInLegend}
             />
           ))}
         </div>
@@ -365,21 +351,13 @@ export default function PlotLegend(props: PlotLegendProps): JSX.Element {
       </div>
     ),
     [
-      classes.legendContent,
-      classes.header,
-      classes.dropdownWrapper,
-      classes.dropdown,
-      classes.grid,
-      classes.footer,
-      classes.addButton,
+      classes,
       xAxisVal,
       xAxisPath,
       paths,
       saveConfig,
+      pathValues,
       pathsWithMismatchedDataLengths,
-      datasets,
-      currentTime,
-      showPlotValuesInLegend,
       lastPath,
     ],
   );

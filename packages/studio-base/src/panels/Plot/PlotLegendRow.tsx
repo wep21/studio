@@ -11,28 +11,21 @@ import {
 } from "@mui/icons-material";
 import { IconButton, Theme, Tooltip, Typography, useTheme } from "@mui/material";
 import { createStyles, makeStyles } from "@mui/styles";
-import { ComponentProps, useCallback, useMemo, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { useCallback, useState } from "react";
 
 import MessagePathInput from "@foxglove/studio-base/components/MessagePathSyntax/MessagePathInput";
-import TimeBasedChart from "@foxglove/studio-base/components/TimeBasedChart";
-import { useHoverValue } from "@foxglove/studio-base/context/HoverValueContext";
 import { getLineColor } from "@foxglove/studio-base/util/plotColors";
 
 import PathSettingsModal from "./PathSettingsModal";
 import { PlotPath, isReferenceLinePlotPathType } from "./internalTypes";
-import { plotableRosTypes, PlotConfig, PlotXAxisVal } from "./types";
+import { plotableRosTypes, PlotXAxisVal } from "./types";
 
 type PlotLegendRowProps = {
   index: number;
   xAxisVal: PlotXAxisVal;
   path: PlotPath;
-  paths: PlotPath[];
+  value?: number;
   hasMismatchedDataLength: boolean;
-  datasets: ComponentProps<typeof TimeBasedChart>["data"]["datasets"];
-  currentTime?: number;
-  saveConfig: (arg0: Partial<PlotConfig>) => void;
-  showPlotValuesInLegend: boolean;
 };
 
 const useStyles = makeStyles((theme: Theme) =>
@@ -72,6 +65,7 @@ const useStyles = makeStyles((theme: Theme) =>
     plotValue: {
       display: "flex",
       alignItems: "center",
+      justifyContent: "right",
       padding: theme.spacing(0.25),
     },
     actionButton: {
@@ -106,31 +100,15 @@ export default function PlotLegendRow({
   index,
   xAxisVal,
   path,
-  paths,
+  value,
   hasMismatchedDataLength,
-  datasets,
-  currentTime,
-  saveConfig,
-  showPlotValuesInLegend,
 }: PlotLegendRowProps): JSX.Element {
-  const correspondingData = useMemo(() => {
-    if (!showPlotValuesInLegend) {
-      return [];
-    }
-    return datasets.find((set) => set.label === path.value)?.data ?? [];
-  }, [datasets, path.value, showPlotValuesInLegend]);
-
-  const [hoverComponentId] = useState<string>(() => uuidv4());
-  const hoverValue = useHoverValue({
-    componentId: hoverComponentId,
-    isTimestampScale: true,
-  });
-
-  const fluentUITheme = useFluentUITheme();
+  // const fluentUITheme = useFluentUITheme();
   const theme = useTheme();
 
+  /*
   const currentDisplay = useMemo(() => {
-    if (!showPlotValuesInLegend) {
+    if (value == undefined) {
       return {
         value: undefined,
         color: "inherit",
@@ -150,12 +128,12 @@ export default function PlotLegendRow({
       color: hoverValue?.value != undefined ? fluentUITheme.palette.yellowDark : "inherit",
     };
   }, [
-    showPlotValuesInLegend,
     hoverValue?.value,
     currentTime,
     fluentUITheme.palette.yellowDark,
     correspondingData,
   ]);
+  */
 
   const legendIconColor = path.enabled
     ? getLineColor(path.color, index)
@@ -165,20 +143,20 @@ export default function PlotLegendRow({
 
   const isReferenceLinePlotPath = isReferenceLinePlotPathType(path);
 
-  const onInputChange = useCallback(
-    (value: string, idx?: number) => {
+  const onInputChange = useCallback((inputValue: string, idx?: number) => {
+    console.log("input change", value, idx);
+    /*
       if (idx == undefined) {
         throw new Error("index not set");
       }
       const newPaths = paths.slice();
       const newPath = newPaths[idx];
       if (newPath) {
-        newPaths[idx] = { ...newPath, value: value.trim() };
+        newPaths[idx] = { ...newPath, value: inputValue.trim() };
       }
       saveConfig({ paths: newPaths });
-    },
-    [paths, saveConfig],
-  );
+      */
+  }, []);
 
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
@@ -189,9 +167,7 @@ export default function PlotLegendRow({
           <PathSettingsModal
             xAxisVal={xAxisVal}
             path={path}
-            paths={paths}
             index={index}
-            saveConfig={saveConfig}
             onDismiss={() => setSettingsModalOpen(false)}
           />
         )}
@@ -203,12 +179,14 @@ export default function PlotLegendRow({
           size="small"
           title="Toggle visibility"
           onClick={() => {
+            /*
             const newPaths = paths.slice();
             const newPath = newPaths[index];
             if (newPath) {
               newPaths[index] = { ...newPath, enabled: !newPath.enabled };
             }
             saveConfig({ paths: newPaths });
+            */
           }}
         >
           <RemoveIcon style={{ color: legendIconColor }} color="inherit" />
@@ -235,13 +213,14 @@ export default function PlotLegendRow({
           </Tooltip>
         )}
       </div>
-      {showPlotValuesInLegend && (
-        <div className={classes.plotValue} style={{ color: currentDisplay.color }}>
+      {value != undefined && (
+        <div className={classes.plotValue}>
           <Typography component="div" variant="body2" align="right" color="inherit">
-            {currentDisplay.value ?? ""}
+            {value}
           </Typography>
         </div>
       )}
+      {value == undefined && <div></div>}
       <div className={classes.actions}>
         <IconButton
           className={classes.actionButton}
@@ -256,9 +235,11 @@ export default function PlotLegendRow({
           size="small"
           title={`Remove ${path.value}`}
           onClick={() => {
+            /*
             const newPaths = paths.slice();
             newPaths.splice(index, 1);
             saveConfig({ paths: newPaths });
+            */
           }}
         >
           <CloseIcon fontSize="small" />
