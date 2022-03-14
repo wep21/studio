@@ -30,6 +30,7 @@ export const Default: Story = () => {
           { value: "foo.baz", enabled: false, timestampMethod: "receiveTime" },
         ]}
         pathValues={{}}
+        hoveredPathValues={{}}
         xAxisVal="timestamp"
         pathsWithMismatchedDataLengths={[]}
         legendDisplay={"floating"}
@@ -52,6 +53,7 @@ export const WithValues: Story = () => {
         pathValues={{
           "foo.bar": 12.3212,
         }}
+        hoveredPathValues={{}}
         xAxisVal="timestamp"
         pathsWithMismatchedDataLengths={[]}
         legendDisplay={"floating"}

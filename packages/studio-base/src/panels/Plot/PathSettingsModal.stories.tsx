@@ -22,10 +22,9 @@ export function DefaultIndex0(): JSX.Element {
     <PathSettingsModal
       xAxisVal="timestamp"
       path={paths[index]!}
-      paths={paths}
       index={index}
       onDismiss={action("onDismiss")}
-      saveConfig={action("saveConfig")}
+      onChange={action("onChange")}
     />
   );
 }
@@ -40,10 +39,9 @@ export function DefaultIndex1(): JSX.Element {
     <PathSettingsModal
       xAxisVal="timestamp"
       path={paths[index]!}
-      paths={paths}
       index={index}
       onDismiss={action("onDismiss")}
-      saveConfig={action("saveConfig")}
+      onChange={action("onChange")}
     />
   );
 }
@@ -58,10 +56,9 @@ export function CustomColor(): JSX.Element {
     <PathSettingsModal
       xAxisVal="timestamp"
       path={paths[index]!}
-      paths={paths}
       index={index}
       onDismiss={action("onDismiss")}
-      saveConfig={action("saveConfig")}
+      onChange={action("onChange")}
     />
   );
 }
@@ -75,10 +72,9 @@ export function CustomXAxis(): JSX.Element {
     <PathSettingsModal
       xAxisVal="custom"
       path={paths[index]!}
-      paths={paths}
       index={index}
       onDismiss={action("onDismiss")}
-      saveConfig={action("saveConfig")}
+      onChange={action("onChange")}
     />
   );
 }
@@ -90,10 +86,9 @@ export function ReferenceLine(): JSX.Element {
     <PathSettingsModal
       xAxisVal="timestamp"
       path={paths[index]!}
-      paths={paths}
       index={index}
       onDismiss={action("onDismiss")}
-      saveConfig={action("saveConfig")}
+      onChange={action("onChange")}
     />
   );
 }

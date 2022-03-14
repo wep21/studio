@@ -10,7 +10,6 @@ import { format } from "@foxglove/studio-base/util/formatTime";
 import { darkColor, getLineColor, lightColor } from "@foxglove/studio-base/util/plotColors";
 import { formatTimeRaw, TimestampMethod } from "@foxglove/studio-base/util/time";
 
-import { PlotXAxisVal } from "./index";
 import {
   BasePlotPath,
   DataSet,
@@ -21,6 +20,7 @@ import {
   Datum,
 } from "./internalTypes";
 import { derivative, applyToDatum, mathFunctions, MathFunction } from "./transformPlotRange";
+import { PlotXAxisVal } from "./types";
 
 const isCustomScale = (xAxisVal: PlotXAxisVal): boolean =>
   xAxisVal === "custom" || xAxisVal === "currentCustom";

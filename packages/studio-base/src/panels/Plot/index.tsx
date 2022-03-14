@@ -16,7 +16,7 @@ import DownloadOutlineIcon from "@mdi/svg/svg/download-outline.svg";
 import { Stack } from "@mui/material";
 import { compact, uniq } from "lodash";
 import memoizeWeak from "memoize-weak";
-import { useEffect, useCallback, useMemo, ComponentProps } from "react";
+import { useEffect, useCallback, useMemo, ComponentProps, useState } from "react";
 
 import { filterMap } from "@foxglove/den/collection";
 import {
@@ -63,10 +63,9 @@ import { downloadCSV } from "./csv";
 import { getDatasets } from "./datasets";
 import helpContent from "./index.help.md";
 import { PlotDataByPath, PlotDataItem } from "./internalTypes";
-import { PlotConfig } from "./types";
+import { PlotConfig, PathValue } from "./types";
 
 export { plotableRosTypes } from "./types";
-export type { PlotConfig, PlotXAxisVal } from "./types";
 
 const defaultSidebarDimension = 240;
 
@@ -88,6 +87,10 @@ export function openSiblingPlotPanel(openSiblingPanel: OpenSiblingPanel, topicNa
 type Props = {
   config: PlotConfig;
   saveConfig: (arg0: Partial<PlotConfig>) => void;
+};
+
+type ValuesByPath = {
+  [path: string]: PathValue;
 };
 
 // messagePathItems contains the whole parsed message, and we don't need to cache all of that.
@@ -277,9 +280,7 @@ function Plot(props: Props) {
 
   type ReducedValue = {
     plotDataByPath: PlotDataByPath;
-    latestValueByPath: {
-      [path: string]: number;
-    };
+    latestValueByPath: ValuesByPath;
   };
 
   // When restoring, keep only the paths that are present in allPaths.
@@ -293,21 +294,30 @@ function Plot(props: Props) {
         };
       }
 
-      const updated: PlotDataByPath = {};
+      const restoredPlotData: PlotDataByPath = {};
+      const restoredValues: ValuesByPath = {};
       const previousPlotData = previous.plotDataByPath;
+      const previousValues = previous.latestValueByPath;
       for (const path of allPaths) {
         const plotData = previousPlotData[path];
         if (plotData) {
-          updated[path] = plotData;
+          restoredPlotData[path] = plotData;
+        }
+
+        if (showPlotValuesInLegend) {
+          const previousValue = previousValues[path];
+          if (previousValue != undefined) {
+            restoredValues[path] = previousValue;
+          }
         }
       }
 
       return {
-        plotDataByPath: updated,
-        latestValueByPath: {},
+        plotDataByPath: restoredPlotData,
+        latestValueByPath: restoredValues,
       };
     },
-    [allPaths],
+    [allPaths, showPlotValuesInLegend],
   );
 
   const addMessages = useCallback(
@@ -334,8 +344,10 @@ function Plot(props: Props) {
             continue;
           }
 
-          if (dataItem.length === 1 && typeof dataItem[0]!.value === "number") {
-            reducedLatestValueByPath[path] = dataItem[0]!.value;
+          if (showPlotValuesInLegend) {
+            if (dataItem.length === 1 && typeof dataItem[0]!.value === "number") {
+              reducedLatestValueByPath[path] = dataItem[0]!.value;
+            }
           }
 
           // Skip any paths we already service in plotDataForBlocks.
@@ -377,8 +389,12 @@ function Plot(props: Props) {
         }
       }
 
+      // Changed indicates the plotDataByPath should be updated, we always update reducedLatestValueByPath
       if (!changed) {
-        return reducedValue;
+        return {
+          plotDataByPath: reducedPlotDataByPath,
+          latestValueByPath: { ...reducedLatestValueByPath },
+        };
       }
 
       return {
@@ -387,11 +403,12 @@ function Plot(props: Props) {
       };
     },
     [
-      plotDataForBlocks,
-      cachedGetMessagePathDataItems,
       followingView,
-      showSingleCurrentMessage,
       topicToPaths,
+      cachedGetMessagePathDataItems,
+      showPlotValuesInLegend,
+      plotDataForBlocks,
+      showSingleCurrentMessage,
     ],
   );
 
@@ -426,9 +443,6 @@ function Plot(props: Props) {
   ]);
 
   const tooltips = useMemo(() => {
-    if (showLegend && showPlotValuesInLegend) {
-      return [];
-    }
     const allTooltips: TimeBasedChartTooltipData[] = [];
     for (const dataset of datasets) {
       for (const datum of dataset.data) {
@@ -436,7 +450,7 @@ function Plot(props: Props) {
       }
     }
     return allTooltips;
-  }, [datasets, showLegend, showPlotValuesInLegend]);
+  }, [datasets]);
 
   const messagePipeline = useMessagePipelineGetter();
   const onClick = useCallback<NonNullable<ComponentProps<typeof PlotChart>["onClick"]>>(
@@ -454,6 +468,22 @@ function Plot(props: Props) {
       }
     },
     [messagePipeline, xAxisVal],
+  );
+
+  const [hoveredValuesByPath, setHoveredValuesByPath] = useState<ValuesByPath>({});
+
+  // When hovering the plot, we update the latest values by path with any hovered values
+  const onHover = useCallback(
+    (items: TimeBasedChartTooltipData[]) => {
+      const valuesByPath: ValuesByPath = {};
+      for (const item of items) {
+        valuesByPath[item.path] = item.value;
+      }
+      if (showPlotValuesInLegend) {
+        setHoveredValuesByPath(valuesByPath);
+      }
+    },
+    [showPlotValuesInLegend],
   );
 
   const stackDirection = useMemo(
@@ -486,6 +516,7 @@ function Plot(props: Props) {
         <PlotLegend
           paths={yAxisPaths}
           pathValues={latestValueByPath}
+          hoveredPathValues={hoveredValuesByPath}
           saveConfig={saveConfig}
           showLegend={showLegend}
           xAxisVal={xAxisVal}
@@ -503,12 +534,14 @@ function Plot(props: Props) {
             maxYValue={parseFloat((maxYValue ?? "").toString())}
             showXAxisLabels={showXAxisLabels}
             showYAxisLabels={showYAxisLabels}
+            showTooltips={!showPlotValuesInLegend}
             datasets={datasets}
             tooltips={tooltips}
             xAxisVal={xAxisVal}
             currentTime={currentTimeSinceStart}
             onClick={onClick}
             defaultView={defaultView}
+            onHover={onHover}
           />
         </Stack>
       </Stack>

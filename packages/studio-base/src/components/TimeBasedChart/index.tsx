@@ -117,6 +117,7 @@ export type Props = {
   drawLegend?: boolean;
   isSynced?: boolean;
   canToggleLines?: boolean;
+  showTooltips?: boolean;
   toggleLine?: (datasetId: string | typeof undefined, lineToHide: string) => void;
   linesToHide?: {
     [key: string]: boolean;
@@ -130,6 +131,7 @@ export type Props = {
   plugins?: ChartOptions["plugins"];
   currentTime?: number;
   defaultView?: ChartDefaultView;
+  onHover?: (items: TimeBasedChartTooltipData[]) => void;
 };
 
 // Create a chart with any y-axis but with an x-axis that shows time since the
@@ -154,6 +156,8 @@ export default function TimeBasedChart(props: Props): JSX.Element {
     currentTime,
     xAxisIsPlaybackTime,
     showXAxisLabels,
+    showTooltips,
+    onHover: propOnHover,
   } = props;
 
   const { labels, datasets } = data;
@@ -313,9 +317,11 @@ export default function TimeBasedChart(props: Props): JSX.Element {
   const updateTooltip = useCallback(
     (elements: RpcElement[]) => {
       if (elements.length === 0 || mouseYRef.current == undefined) {
+        propOnHover?.([]);
         return setActiveTooltip(undefined);
       }
 
+      const hoveredItems: TimeBasedChartTooltipData[] = [];
       const tooltipItems: { item: TimeBasedChartTooltipData; element: RpcElement }[] = [];
 
       for (const element of elements) {
@@ -332,9 +338,12 @@ export default function TimeBasedChart(props: Props): JSX.Element {
           item: foundTooltip,
           element,
         });
+
+        hoveredItems.push(foundTooltip);
       }
 
       if (tooltipItems.length === 0) {
+        propOnHover?.([]);
         return setActiveTooltip(undefined);
       }
 
@@ -348,10 +357,10 @@ export default function TimeBasedChart(props: Props): JSX.Element {
           data: tooltipItems.map((item) => item.item),
         });
 
-        // fixme - call a prop to provide the hovered data
+        propOnHover?.(hoveredItems);
       }
     },
-    [tooltipLookup],
+    [tooltipLookup, propOnHover],
   );
 
   const setHoverValue = useSetHoverValue();
@@ -799,13 +808,17 @@ export default function TimeBasedChart(props: Props): JSX.Element {
 
   const datasetsLength = datasets.length;
   const tooltipContent = useMemo(() => {
+    if (showTooltips === false) {
+      return undefined;
+    }
+
     return activeTooltip ? (
       <TimeBasedChartTooltipContent
         multiDataset={datasetsLength > 1}
         content={activeTooltip.data}
       />
     ) : undefined;
-  }, [activeTooltip, datasetsLength]);
+  }, [activeTooltip, datasetsLength, showTooltips]);
 
   // reset is shown if we have sync lock and there has been user interaction, or if we don't
   // have sync lock and the user has manually interacted with the plot

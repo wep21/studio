@@ -20,6 +20,7 @@ type PathSettingsModalProps = {
   xAxisVal: PlotXAxisVal;
   path: PlotPath;
   index: number;
+  onChange: (index: number, newConfig: PlotPath) => void;
   onDismiss: () => void;
 };
 
@@ -35,21 +36,18 @@ export default function PathSettingsModal({
   xAxisVal,
   path,
   index,
+  onChange,
   onDismiss,
 }: PathSettingsModalProps): JSX.Element {
   const classes = useStyles();
   const hostId = useDialogHostId();
 
-  const savePathConfig = useCallback((newConfig: Partial<PlotPath>) => {
-    /*
-      const newPaths = paths.slice();
-      const newPath = newPaths[index];
-      if (newPath) {
-        newPaths[index] = { ...newPath, ...newConfig };
-      }
-      saveConfig({ paths: newPaths });
-      */
-  }, []);
+  const savePathConfig = useCallback(
+    (newConfig: Partial<PlotPath>) => {
+      onChange(index, { ...path, ...newConfig });
+    },
+    [index, onChange, path],
+  );
 
   const resetToDefaults = useCallback(() => {
     savePathConfig({ color: undefined });

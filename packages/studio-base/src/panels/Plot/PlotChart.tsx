@@ -25,8 +25,8 @@ import TimeBasedChart, {
 } from "@foxglove/studio-base/components/TimeBasedChart";
 import { getLineColor } from "@foxglove/studio-base/util/plotColors";
 
-import { PlotXAxisVal } from "./index";
 import { PlotPath, isReferenceLinePlotPathType } from "./internalTypes";
+import { PlotXAxisVal } from "./types";
 
 // A "reference line" plot path is a numeric value. It creates a horizontal line on the plot at the specified value.
 function getAnnotationFromReferenceLine(path: PlotPath, index: number): AnnotationOptions {
@@ -67,7 +67,9 @@ type PlotChartProps = {
   xAxisVal: PlotXAxisVal;
   currentTime?: number;
   defaultView?: ChartDefaultView;
+  showTooltips?: boolean;
   onClick?: TimeBasedChartProps["onClick"];
+  onHover?: TimeBasedChartProps["onHover"];
 };
 export default function PlotChart(props: PlotChartProps): JSX.Element {
   const theme = useTheme();
@@ -80,10 +82,12 @@ export default function PlotChart(props: PlotChartProps): JSX.Element {
     minYValue,
     maxYValue,
     datasets,
+    showTooltips,
     onClick,
     isSynced,
     tooltips,
     xAxisVal,
+    onHover,
   } = props;
 
   const annotations = useMemo(() => getAnnotations(paths), [paths]);
@@ -130,6 +134,7 @@ export default function PlotChart(props: PlotChartProps): JSX.Element {
         height={height ?? 0}
         data={data}
         tooltips={tooltips}
+        showTooltips={showTooltips}
         annotations={annotations}
         type="scatter"
         yAxes={yAxes}
@@ -138,6 +143,7 @@ export default function PlotChart(props: PlotChartProps): JSX.Element {
         currentTime={currentTime}
         defaultView={defaultView}
         onClick={onClick}
+        onHover={onHover}
       />
     </div>
   );

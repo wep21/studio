@@ -17,11 +17,13 @@ import { useCallback, useRef } from "react";
 import { parse as parseMessageDefinition } from "@foxglove/rosmsg";
 import { fromSec } from "@foxglove/rostime";
 import SchemaEditor from "@foxglove/studio-base/components/PanelSettings/SchemaEditor";
-import Plot, { PlotConfig } from "@foxglove/studio-base/panels/Plot";
+import Plot from "@foxglove/studio-base/panels/Plot";
 import { BlockCache } from "@foxglove/studio-base/players/types";
 import PanelSetup, { Fixture, triggerWheel } from "@foxglove/studio-base/stories/PanelSetup";
 import { useReadySignal } from "@foxglove/studio-base/stories/ReadySignalContext";
 import { RosDatatypes } from "@foxglove/studio-base/types/RosDatatypes";
+
+import { PlotConfig } from "./types";
 
 const float64StampedDefinition = `std_msgs/Header header
 float64 data

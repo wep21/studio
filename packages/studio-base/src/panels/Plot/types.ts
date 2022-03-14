@@ -49,3 +49,5 @@ export const plotableRosTypes = [
   "string",
   "json",
 ];
+
+export type PathValue = string | number | bigint | boolean;

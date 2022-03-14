@@ -31,15 +31,16 @@ import MessagePathInput from "@foxglove/studio-base/components/MessagePathSyntax
 import PlotLegendRow from "@foxglove/studio-base/panels/Plot/PlotLegendRow";
 
 import { PlotPath, BasePlotPath, isReferenceLinePlotPathType } from "./internalTypes";
-import { plotableRosTypes, PlotConfig, PlotXAxisVal } from "./types";
+import { plotableRosTypes, PlotConfig, PlotXAxisVal, PathValue } from "./types";
 
 const minLegendWidth = 25;
 const maxLegendWidth = 800;
 
 type PlotLegendProps = {
   paths: PlotPath[];
-  pathValues: { [path: string]: number };
-  saveConfig: (arg0: Partial<PlotConfig>) => void;
+  pathValues: { [path: string]: PathValue };
+  hoveredPathValues: { [path: string]: PathValue };
+  saveConfig: (partialConfig: Partial<PlotConfig>) => void;
   showLegend: boolean;
   xAxisVal: PlotXAxisVal;
   xAxisPath?: BasePlotPath;
@@ -229,6 +230,7 @@ export default function PlotLegend(props: PlotLegendProps): JSX.Element {
     sidebarDimension,
     legendDisplay,
     pathValues,
+    hoveredPathValues,
   } = props;
   const lastPath = last(paths);
   const classes = useStyles({
@@ -321,7 +323,21 @@ export default function PlotLegend(props: PlotLegendProps): JSX.Element {
               xAxisVal={xAxisVal}
               path={path}
               value={pathValues[path.value]}
+              hoverValue={hoveredPathValues[path.value]}
               hasMismatchedDataLength={pathsWithMismatchedDataLengths.includes(path.value)}
+              onChange={(idx, value) => {
+                const newPaths = paths.slice();
+                const newPath = newPaths[idx];
+                if (newPath) {
+                  newPaths[idx] = value;
+                }
+                saveConfig({ paths: newPaths });
+              }}
+              onRemove={(idx) => {
+                const newPaths = paths.slice();
+                newPaths.splice(idx, 1);
+                saveConfig({ paths: newPaths });
+              }}
             />
           ))}
         </div>
@@ -359,6 +375,7 @@ export default function PlotLegend(props: PlotLegendProps): JSX.Element {
       pathValues,
       pathsWithMismatchedDataLengths,
       lastPath,
+      hoveredPathValues,
     ],
   );
 
