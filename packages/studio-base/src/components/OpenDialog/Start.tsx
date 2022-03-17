@@ -119,7 +119,7 @@ export default function Start(props: IStartProps): JSX.Element {
       },
       {
         id: "sample-data",
-        children: "Explore sample data",
+        children: "Explore Sample Data",
         secondaryText: "New to Foxglove Studio? Start here!",
         iconProps: { iconName: "BookStar" },
         onClick: () => onSelectView("demo"),

@@ -329,7 +329,7 @@ function buildMenu(browserWindow: BrowserWindow): Menu {
     role: "help",
     submenu: [
       {
-        label: "Explore sample data",
+        label: "Explore Sample Data",
         click: () => browserWindow.webContents.send("open-sample-data"),
       },
       { type: "separator" },
