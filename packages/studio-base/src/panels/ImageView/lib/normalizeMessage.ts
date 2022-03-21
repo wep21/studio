@@ -23,6 +23,15 @@ export const NORMALIZABLE_IMAGE_DATATYPES = [
   "foxglove.CompressedImage",
 ];
 
+function asBigint(val: bigint | string | number): bigint {
+  if (typeof val === "string") {
+    return BigInt(val);
+  } else if (typeof val === "number") {
+    return BigInt(val);
+  }
+  return val;
+}
+
 /**
  * Convert a message based on datatype to a NormalizedImageMessage
  * A NormalizedImageMessage defines consistent semantics across different frameworks
@@ -34,7 +43,7 @@ export function normalizeImageMessage(
   switch (datatype) {
     case "foxglove.RawImage": {
       const typedMessage = message as FoxgloveRawImageMessage;
-      const stamp = fromNanoSec(typedMessage.timestamp);
+      const stamp = fromNanoSec(asBigint(typedMessage.timestamp));
       return {
         type: "raw",
         stamp,
@@ -74,7 +83,7 @@ export function normalizeImageMessage(
     }
     case "foxglove.CompressedImage": {
       const typedMessage = message as FoxgloveCompressedImageMessage;
-      const stamp = fromNanoSec(typedMessage.timestamp);
+      const stamp = fromNanoSec(asBigint(typedMessage.timestamp));
       return {
         type: "compressed",
         stamp,

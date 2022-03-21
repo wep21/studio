@@ -178,7 +178,7 @@ export type CompressedImageMessage = {
 };
 
 export type FoxgloveRawImageMessage = {
-  timestamp: bigint;
+  timestamp: bigint | string | number;
   width: number;
   height: number;
   encoding: string;
@@ -188,7 +188,7 @@ export type FoxgloveRawImageMessage = {
 
 export type FoxgloveCompressedImageMessage = {
   type: "compressed";
-  timestamp: bigint;
+  timestamp: bigint | string | number;
   format: string;
   data: Uint8Array;
 };
