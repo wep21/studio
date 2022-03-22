@@ -143,6 +143,9 @@ export default function muiComponents(theme: Theme): ThemeOptions["components"] 
           borderRadius: theme.shape.borderRadius,
           ...iconHack,
 
+          ".root-span": {
+            display: "flex",
+          },
           "&:hover": {
             backgroundColor: theme.palette.action.hover,
           },

@@ -11,18 +11,6 @@ import { useState, useMemo } from "react";
 import Stack from "@foxglove/studio-base/components/Stack";
 import TextContent from "@foxglove/studio-base/components/TextContent";
 
-type SidebarContentProps = {
-  title: string;
-  helpContent?: React.ReactNode;
-  noPadding?: boolean;
-
-  /** Buttons/items to display on the leading (left) side of the header */
-  leadingItems?: React.ReactNode[];
-
-  /** Buttons/items to display on the trailing (right) side of the header */
-  trailingItems?: React.ReactNode[];
-};
-
 const useStyles = makeStyles((theme: Theme) => ({
   toolbar: {
     minHeight: theme.spacing(7),
@@ -32,16 +20,18 @@ const useStyles = makeStyles((theme: Theme) => ({
   },
 }));
 
-const ContentWrapper = muiStyled("div")<{ noPadding: boolean }>(({ theme, noPadding }) => ({
+const ContentWrapper = muiStyled("div", {
+  shouldForwardProp: (prop) => prop !== "disablePadding",
+})<{ disablePadding: boolean }>(({ theme, disablePadding }) => ({
   flexGrow: 1,
 
-  ...(!noPadding && {
+  ...(!disablePadding && {
     padding: theme.spacing(0, 2, 2),
   }),
 }));
 
 export function SidebarContent({
-  noPadding = false,
+  disablePadding = false,
   title,
   children,
   helpContent,
@@ -100,7 +90,19 @@ export function SidebarContent({
           <TextContent allowMarkdownHtml={true}>{helpContent}</TextContent>
         </div>
       )}
-      <ContentWrapper {...{ noPadding }}>{children}</ContentWrapper>
+      <ContentWrapper {...{ disablePadding }}>{children}</ContentWrapper>
     </Stack>
   );
 }
+
+type SidebarContentProps = {
+  title: string;
+  helpContent?: React.ReactNode;
+  disablePadding?: boolean;
+
+  /** Buttons/items to display on the leading (left) side of the header */
+  leadingItems?: React.ReactNode[];
+
+  /** Buttons/items to display on the trailing (right) side of the header */
+  trailingItems?: React.ReactNode[];
+};
