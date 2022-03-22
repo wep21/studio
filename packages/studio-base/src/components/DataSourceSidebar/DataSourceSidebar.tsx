@@ -6,6 +6,7 @@ import { Add24Regular as AddIcon } from "@fluentui/react-icons";
 import ErrorIcon from "@mui/icons-material/ErrorOutline";
 import WarningIcon from "@mui/icons-material/WarningAmber";
 import {
+  Box,
   Divider,
   IconButton,
   List,
@@ -23,7 +24,6 @@ import {
 } from "@foxglove/studio-base/components/MessagePipeline";
 import NotificationModal from "@foxglove/studio-base/components/NotificationModal";
 import { SidebarContent } from "@foxglove/studio-base/components/SidebarContent";
-import Stack from "@foxglove/studio-base/components/Stack";
 import ModalContext from "@foxglove/studio-base/context/ModalContext";
 import { useAppConfigurationValue } from "@foxglove/studio-base/hooks/useAppConfigurationValue";
 import { PlayerProblem } from "@foxglove/studio-base/players/types";
@@ -81,9 +81,9 @@ export default function DataSourceSidebar(props: Props): JSX.Element {
         ),
       ].filter(Boolean)}
     >
-      <Stack padding={2}>
+      <Box paddingX={2} paddingBottom={2}>
         <DataSourceInfo />
-      </Stack>
+      </Box>
 
       {playerProblems.length > 0 && (
         <>
@@ -102,7 +102,7 @@ export default function DataSourceSidebar(props: Props): JSX.Element {
                   <ListItemText
                     primary={problem.message}
                     primaryTypographyProps={{
-                      color: problem.severity === "error" ? "error" : "inherit",
+                      color: problem.severity === "error" ? "error.main" : "warning.main",
                     }}
                   />
                 </ListItemButton>
