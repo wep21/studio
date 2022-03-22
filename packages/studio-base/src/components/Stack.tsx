@@ -13,10 +13,9 @@ function getStackUtilityClass(slot: string): string {
 
 const StackRoot = muiStyled("div", {
   name: "FoxgloveStack",
+  overridesResolver: (_props, styles) => [styles.root],
   slot: "Root",
-  overridesResolver: (_props, styles) => {
-    return [styles.root];
-  },
+  skipSx: true,
 })(({ theme, ownerState }: { theme: Theme; ownerState: StackProps }) => ({
   display: "flex",
   flexDirection: ownerState.direction,
