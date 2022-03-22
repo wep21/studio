@@ -4,6 +4,7 @@
 
 import { captureException } from "@sentry/electron";
 import { autoUpdater } from "electron-updater";
+import { EventEmitter } from "eventemitter3";
 
 import Logger from "@foxglove/log";
 import { AppSetting } from "@foxglove/studio-base/src/AppSetting";
@@ -27,7 +28,15 @@ function isNetworkError(err: unknown) {
   );
 }
 
-class StudioAppUpdater {
+type StudioAppUpdaterEvents = {
+  "checking-for-update": () => void;
+  "update-available": () => void;
+  "update-not-available": () => void;
+  "update-downloaded": () => void;
+  "update-error": (err: Error) => void;
+};
+
+class StudioAppUpdater extends EventEmitter<StudioAppUpdaterEvents> {
   private started: boolean = false;
   // Seconds to wait after app startup to check and download updates.
   // This gives the user time to disable app updates for new installations
@@ -45,6 +54,12 @@ class StudioAppUpdater {
       return;
     }
     this.started = true;
+
+    autoUpdater.on("checking-for-update", () => this.emit("checking-for-update"));
+    autoUpdater.on("update-available", () => this.emit("update-available"));
+    autoUpdater.on("update-not-available", () => this.emit("update-not-available"));
+    autoUpdater.on("update-downloaded", () => this.emit("update-downloaded"));
+    autoUpdater.on("error", (err: Error) => this.emit("update-error", err));
 
     log.info(`Starting update loop`);
     setTimeout(() => {

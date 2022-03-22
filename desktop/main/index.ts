@@ -50,6 +50,12 @@ function updateNativeColorScheme() {
     colorScheme === "dark" ? "dark" : colorScheme === "light" ? "light" : "system";
 }
 
+function broadcastEvent(event: string, ...args: unknown[]) {
+  for (const browserWindow of BrowserWindow.getAllWindows()) {
+    browserWindow.webContents.send(event, ...args);
+  }
+}
+
 function main() {
   const start = Date.now();
   log.info(`${pkgInfo.productName} ${pkgInfo.version}`);
@@ -223,7 +229,13 @@ function main() {
       log.info("Automatic updates disabled (development version)");
     }
 
-    StudioAppUpdater.Instance().start();
+    const appUpdater = StudioAppUpdater.Instance();
+    appUpdater.on("checking-for-update", () => broadcastEvent("checking-for-update"));
+    appUpdater.on("update-available", () => broadcastEvent("update-available"));
+    appUpdater.on("update-not-available", () => broadcastEvent("update-not-available"));
+    appUpdater.on("update-downloaded", () => broadcastEvent("update-downloaded"));
+    appUpdater.on("update-error", (err) => broadcastEvent("update-error", err));
+    appUpdater.start();
 
     app.setAboutPanelOptions({
       applicationName: pkgInfo.productName,

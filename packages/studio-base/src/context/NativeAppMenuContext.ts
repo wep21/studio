@@ -5,9 +5,11 @@
 import { createContext, useContext } from "react";
 
 export type NativeAppMenuEvent =
+  // Menu items
   | "open-file"
   | "open-remote-file"
   | "open-sample-data"
+  | "open-preferences"
   | "open-layouts"
   | "open-add-panel"
   | "open-panel-settings"
@@ -15,7 +17,12 @@ export type NativeAppMenuEvent =
   | "open-extensions"
   | "open-help"
   | "open-account"
-  | "open-preferences";
+  // StudioAppUpdater events
+  | "checking-for-update"
+  | "update-available"
+  | "update-not-available"
+  | "update-downloaded"
+  | "update-error";
 
 type Handler = () => void;
 

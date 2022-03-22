@@ -56,6 +56,7 @@ import Sidebar, { SidebarItem } from "@foxglove/studio-base/components/Sidebar";
 import { SidebarContent } from "@foxglove/studio-base/components/SidebarContent";
 import Stack from "@foxglove/studio-base/components/Stack";
 import { URLStateSyncAdapter } from "@foxglove/studio-base/components/URLStateSyncAdapter";
+import UpdaterSidebar from "@foxglove/studio-base/components/UpdaterSidebar";
 import { useAssets } from "@foxglove/studio-base/context/AssetsContext";
 import ConsoleApiContext from "@foxglove/studio-base/context/ConsoleApiContext";
 import {
@@ -98,6 +99,14 @@ const useStyles = makeStyles({
   },
 });
 
+enum UpdaterState {
+  Idle,
+  Checking,
+  UpdateAvailable,
+  UpdateDownloaded,
+  Error,
+}
+
 type SidebarItemKey =
   | "connection"
   | "add-panel"
@@ -106,6 +115,7 @@ type SidebarItemKey =
   | "extensions"
   | "account"
   | "layouts"
+  | "updater"
   | "preferences"
   | "help";
 
@@ -312,6 +322,29 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
     }, []),
   );
 
+  const [updaterState, setUpdaterState] = useState(UpdaterState.Idle);
+
+  useNativeAppMenuEvent(
+    "checking-for-update",
+    useCallback(() => setUpdaterState(UpdaterState.Checking), []),
+  );
+  useNativeAppMenuEvent(
+    "update-available",
+    useCallback(() => setUpdaterState(UpdaterState.UpdateAvailable), []),
+  );
+  useNativeAppMenuEvent(
+    "update-not-available",
+    useCallback(() => setUpdaterState(UpdaterState.Idle), []),
+  );
+  useNativeAppMenuEvent(
+    "update-downloaded",
+    useCallback(() => setUpdaterState(UpdaterState.UpdateDownloaded), []),
+  );
+  useNativeAppMenuEvent(
+    "update-error",
+    useCallback(() => setUpdaterState(UpdaterState.Error), []),
+  );
+
   const nativeAppMenu = useNativeAppMenu();
 
   const connectionSources = useMemo(() => {
@@ -490,7 +523,7 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
   }, []);
 
   const sidebarItems = useMemo<Map<SidebarItemKey, SidebarItem>>(() => {
-    const SIDEBAR_ITEMS = new Map<SidebarItemKey, SidebarItem>([
+    const UPPER_SIDEBAR_ITEMS = new Map<SidebarItemKey, SidebarItem>([
       [
         "connection",
         {
@@ -510,25 +543,59 @@ export default function Workspace(props: WorkspaceProps): JSX.Element {
         { iconName: "SingleColumnEdit", title: "Panel settings", component: PanelSettings },
       ],
       ["variables", { iconName: "Variable2", title: "Variables", component: Variables }],
+    ]);
+    const LOWER_SIDEBAR_ITEMS = new Map<SidebarItemKey, SidebarItem>([
       ["preferences", { iconName: "Settings", title: "Preferences", component: Preferences }],
       ["extensions", { iconName: "AddIn", title: "Extensions", component: ExtensionsSidebar }],
       ["help", { iconName: "QuestionCircle", title: "Help", component: HelpSidebar }],
     ]);
 
-    return supportsAccountSettings
-      ? new Map([
-          ...SIDEBAR_ITEMS,
-          [
-            "account",
-            {
-              iconName: currentUser != undefined ? "BlockheadFilled" : "Blockhead",
-              title: currentUser != undefined ? `Signed in as ${currentUser.email}` : "Account",
-              component: AccountSettings,
-            },
-          ],
-        ])
-      : SIDEBAR_ITEMS;
-  }, [DataSourceSidebarItem, playerProblems, supportsAccountSettings, currentUser]);
+    // Add the upper sidebar items
+    const newSidebarItems = new Map([...UPPER_SIDEBAR_ITEMS]);
+
+    // Add the UpdaterSidebar item if there is an update status to show
+    switch (updaterState) {
+      case UpdaterState.UpdateAvailable:
+        newSidebarItems.set("updater", {
+          iconName: "Download",
+          title: "Update available",
+          component: UpdaterSidebar,
+        });
+        break;
+      case UpdaterState.UpdateDownloaded:
+        newSidebarItems.set("updater", {
+          iconName: "Sync",
+          title: "Update downloaded",
+          component: UpdaterSidebar,
+        });
+        break;
+      case UpdaterState.Error:
+        newSidebarItems.set("updater", {
+          iconName: "Warning",
+          title: "Update check failed",
+          component: UpdaterSidebar,
+        });
+        break;
+      default:
+        break;
+    }
+
+    // Add the lower sidebar items
+    for (const [key, item] of LOWER_SIDEBAR_ITEMS) {
+      newSidebarItems.set(key, item);
+    }
+
+    // Add the sign-in sidebar item
+    if (supportsAccountSettings) {
+      newSidebarItems.set("account", {
+        iconName: currentUser != undefined ? "BlockheadFilled" : "Blockhead",
+        title: currentUser != undefined ? `Signed in as ${currentUser.email}` : "Account",
+        component: AccountSettings,
+      });
+    }
+
+    return newSidebarItems;
+  }, [DataSourceSidebarItem, playerProblems, updaterState, supportsAccountSettings, currentUser]);
 
   const sidebarBottomItems: readonly SidebarItemKey[] = useMemo(() => {
     return supportsAccountSettings ? ["help", "account", "preferences"] : ["help", "preferences"];

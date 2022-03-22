@@ -4,6 +4,7 @@
 
 // Events that are forwarded from the main process
 export type ForwardedMenuEvent =
+  // Menu items
   | "open-file"
   | "open-remote-file"
   | "open-sample-data"
@@ -14,7 +15,13 @@ export type ForwardedMenuEvent =
   | "open-variables"
   | "open-extensions"
   | "open-help"
-  | "open-account";
+  | "open-account"
+  // StudioAppUpdater events
+  | "checking-for-update"
+  | "update-available"
+  | "update-not-available"
+  | "update-downloaded"
+  | "update-error";
 
 interface NativeMenuBridge {
   // Events from the native window are available in the main process but not the renderer, so we forward them through the bridge.
