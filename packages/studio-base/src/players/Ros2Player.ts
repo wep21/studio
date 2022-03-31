@@ -12,7 +12,7 @@ import { RosMsgDefinition } from "@foxglove/rosmsg";
 import { definitions as commonDefs } from "@foxglove/rosmsg-msgs-common";
 import { definitions as foxgloveDefs } from "@foxglove/rosmsg-msgs-foxglove";
 import { Time, fromMillis, toSec } from "@foxglove/rostime";
-import { Reliability } from "@foxglove/rtps";
+import { Durability, Reliability } from "@foxglove/rtps";
 import { ParameterValue } from "@foxglove/studio";
 import OsContextSingleton from "@foxglove/studio-base/OsContextSingleton";
 import PlayerProblemManager from "@foxglove/studio-base/players/PlayerProblemManager";
@@ -362,14 +362,12 @@ export default class Ros2Player implements Player {
       const dataType = availableTopic.datatype;
 
       // Find the first reliable publisher for this topic to mimic its QoS profile
-      const rosEndpoint = publishedTopics
-        .get(topicName)
-        ?.find((pub) => pub.reliability.kind === Reliability.Reliable);
+      const rosEndpoint = publishedTopics.get(topicName)?.[0];
       if (!rosEndpoint) {
         this._problems.addProblem(`subscription:${topicName}`, {
           severity: "warn",
-          message: `No reliable publisher for "${topicName}"`,
-          tip: `Best-effort subscriptions are not supported yet`,
+          message: `No publisher for "${topicName}"`,
+          tip: `Publish "${topicName}"`,
         });
         continue;
       } else {
@@ -389,12 +387,36 @@ export default class Ros2Player implements Player {
         });
       }
 
+      const reliableCount = publishedTopics
+        .get(topicName)
+        ?.filter((pub) => pub.reliability.kind === Reliability.Reliable).length;
+
+      const transientLocalCount = publishedTopics
+        .get(topicName)
+        ?.filter((pub) => pub.durability === Durability.TransientLocal).length;
+
+      const endpointCount = publishedTopics.get(topicName)?.length;
+
+      const requestDurability =
+        transientLocalCount === endpointCount ? Durability.TransientLocal : Durability.Volatile;
+
+      const requestReliability =
+        reliableCount === endpointCount
+          ? {
+              kind: Reliability.Reliable,
+              maxBlockingTime: rosEndpoint.reliability.maxBlockingTime,
+            }
+          : {
+              kind: Reliability.BestEffort,
+              maxBlockingTime: rosEndpoint.reliability.maxBlockingTime,
+            };
+
       const subscription = this._rosNode.subscribe({
         topic: topicName,
         dataType,
-        durability: rosEndpoint.durability,
+        durability: requestDurability,
         history: rosEndpoint.history,
-        reliability: rosEndpoint.reliability,
+        reliability: requestReliability,
         msgDefinition,
       });
 
